@@ -1,0 +1,172 @@
+{% extends "manage_base.html" %}
+{% import "components/form.html" as form with context %}
+{% import "components/user.html" as user with context %}
+{% set dudoc = dudoc or {} %}
+{% block manage_content %}
+<div class="section">
+  <div class="section__header">
+    <h1 class="section__title">{{ _('User Details') }}</h1>
+    <div class="section__tools">
+      <a class="button rounded" href="{{ url('user_manage_main') }}">{{ _('Back to List') }}</a>
+    </div>
+  </div>
+  <div class="section__body no-padding">
+    <table class="data-table">
+      <tbody>
+        <tr>
+          <th>{{ _('User ID') }}</th>
+          <td>{{ udoc._id }}</td>
+        </tr>
+        <tr>
+          <th>{{ _('Username') }}</th>
+          <td>{{ user.render_inline(udoc, badge=false) }}</td>
+        </tr>
+        <tr>
+          <th>{{ _('Email') }}</th>
+          <td>{{ udoc.mail }}</td>
+        </tr>
+        <tr>
+          <th>{{ _('School') }}</th>
+          <td>{{ udoc.school or _('Not set') }}</td>
+        </tr>
+        <tr>
+          <th>{{ _('Homepage') }}</th>
+          <td>{% if udoc.homepage %}<a class="typo-a" href="{{ udoc.homepage }}">{{ udoc.homepage }}</a>{% else %}{{ _('Not set') }}{% endif %}</td>
+        </tr>
+        <tr>
+          <th>{{ _('Registration Time') }}</th>
+          <td>{{ moment(udoc.regat).format('YYYY-MM-DD HH:mm') if udoc.regat else _('Never') }}</td>
+        </tr>
+        <tr>
+          <th>{{ _('Last Login') }}</th>
+          <td>{{ moment(udoc.loginat).format('YYYY-MM-DD HH:mm') if udoc.loginat else _('Never') }}</td>
+        </tr>
+        <tr>
+          <th>{{ _('Current Privilege') }}</th>
+          <td>{{ udoc.priv }}</td>
+        </tr>
+        <tr>
+          <th>{{ _('Role') }}</th>
+          <td>{{ dudoc.role or _('Guest') }}</td>
+        </tr>
+        <tr>
+          <th>{{ _('Permission Value') }}</th>
+          <td>{{ dudoc.perm|default(0)|string }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+<div class="section">
+  <div class="section__header">
+    <h1 class="section__title">{{ _('Password Management') }}</h1>
+  </div>
+  <div class="section__body">
+    <form method="post" action="{{ url('user_manage_detail', { uid: udoc._id }) }}">
+      <input type="hidden" name="operation" value="resetPassword">
+      <div class="row">
+        <div class="medium-6 columns">
+          {{ form.form_password({ label: _('New Password'), name: 'password' }) }}
+        </div>
+      </div>
+      <button type="submit" class="rounded primary button">{{ _('Reset Password') }}</button>
+    </form>
+  </div>
+</div>
+<div class="section">
+  <div class="section__header">
+    <h1 class="section__title">{{ _('Basic Information') }}</h1>
+  </div>
+  <div class="section__body">
+    <form method="post" action="{{ url('user_manage_detail', { uid: udoc._id }) }}">
+      <input type="hidden" name="operation" value="edit">
+      <div class="row">
+        <div class="medium-6 columns">{{ form.form_input({ label: _('Email'), name: 'mail', value: udoc.mail }) }}</div>
+        <div class="medium-6 columns">{{ form.form_input({ label: _('Username'), name: 'uname', value: udoc.uname }) }}</div>
+      </div>
+      <div class="row">
+        <div class="medium-6 columns">{{ form.form_input({ label: _('School'), name: 'school', value: udoc.school|default('') }) }}</div>
+        <div class="medium-6 columns">{{ form.form_input({ label: _('Homepage'), name: 'homepage', value: udoc.homepage|default('') }) }}</div>
+      </div>
+      <div class="row">
+        <div class="columns">{{ form.form_textarea({ label: _('Bio'), name: 'bio', value: udoc.bio|default('') }) }}</div>
+      </div>
+      <button type="submit" class="rounded primary button">{{ _('Save Changes') }}</button>
+    </form>
+  </div>
+</div>
+<div class="section">
+  <div class="section__header">
+    <h1 class="section__title">{{ _('Privilege Management') }}</h1>
+  </div>
+  <div class="section__body">
+    <form method="post" action="{{ url('user_manage_detail', { uid: udoc._id }) }}">
+      <input type="hidden" name="operation" value="setPriv">
+      {{ form.form_input({ label: _('Privilege'), name: 'priv', value: udoc.priv, type: 'number' }) }}
+      <button type="submit" class="rounded primary button">{{ _('Update Privilege') }}</button>
+    </form>
+  </div>
+</div>
+<div class="section">
+  <div class="section__header">
+    <h1 class="section__title">{{ _('User Status') }}</h1>
+  </div>
+  <div class="section__body">
+    <form method="post" action="{{ url('user_manage_detail', { uid: udoc._id }) }}" class="inline-form">
+      <input type="hidden" name="operation" value="ban">
+      <button type="submit" class="rounded alert button">{{ _('Ban User') }}</button>
+    </form>
+    <form method="post" action="{{ url('user_manage_detail', { uid: udoc._id }) }}" class="inline-form">
+      <input type="hidden" name="operation" value="unban">
+      <button type="submit" class="rounded success button">{{ _('Unban User') }}</button>
+    </form>
+  </div>
+</div>
+<div class="section">
+  <div class="section__header">
+    <h1 class="section__title">{{ _('Domain Permissions') }}</h1>
+  </div>
+  <div class="section__body no-padding">
+    <table class="data-table">
+      <colgroup>
+        <col class="col--domain">
+        <col class="col--role">
+        <col class="col--value">
+        <col class="col--list">
+      </colgroup>
+      <thead>
+        <tr>
+          <th class="col--domain">{{ _('Domain') }}</th>
+          <th class="col--role">{{ _('Role') }}</th>
+          <th class="col--value">{{ _('Permission Value') }}</th>
+          <th class="col--list">{{ _('Permission List') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for record in domainPermissions %}
+        <tr>
+          <td class="col--domain">{{ record.domainName }}</td>
+          <td class="col--role">{{ record.role }}</td>
+          <td class="col--value" title="{{ record.permText }}">{{ record.permText }}</td>
+          <td class="col--list">
+            {% if record.permEntries and record.permEntries.length %}
+              <ul>
+                {% for perm in record.permEntries %}
+                  <li>{{ _(perm) }}</li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              {{ _('No permission') }}
+            {% endif %}
+          </td>
+        </tr>
+        {% else %}
+        <tr>
+          <td colspan="4" class="text-center">{{ _('No joined domain records') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
