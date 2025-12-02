@@ -10,7 +10,7 @@
     "build": "tsc"
   },
   "dependencies": {
-    "hydrooj": "workspace:*"
+    "hydrooj": "^1.0.0"
   },
   "devDependencies": {
     "typescript": "^5.0.0"

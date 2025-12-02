@@ -1,14 +1,9 @@
-import { Context, Service, Handler, Schema } from '../../packages/hydrooj/src';
-import { UserModel, DomainModel } from '../../packages/hydrooj/src/model';
-import { UserFacingError, ForbiddenError } from '../../packages/hydrooj/src/error';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
+const { Context, Service, Handler, Schema } = require('hydrooj');
+const { UserModel, DomainModel } = require('hydrooj/src/model');
+const { UserFacingError, ForbiddenError } = require('hydrooj/src/error');
+const { join } = require('path');
 
-// 获取当前文件的目录路径
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
-export default class UserManagementService extends Service {
+class UserManagementService extends Service {
     static inject = ['server', 'renderer'];
     static Config = Schema.object({
         enabled: Schema.boolean().default(true),
@@ -148,3 +143,5 @@ export default class UserManagementService extends Service {
         ctx.response.body = userDomains;
     }
 }
+
+module.exports = UserManagementService;
