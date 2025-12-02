@@ -1,9 +1,7 @@
-const { Context, Service, Handler, Schema } = require('hydrooj');
-const { UserModel, DomainModel } = require('hydrooj/src/model');
-const { UserFacingError, ForbiddenError } = require('hydrooj/src/error');
-const { join } = require('path');
+import { Context, Service, Handler, Schema, UserModel, DomainModel, UserFacingError, ForbiddenError } from 'hydrooj';
+import { join } from 'path';
 
-class UserManagementService extends Service {
+export default class UserManagementService extends Service {
     static inject = ['server', 'renderer'];
     static Config = Schema.object({
         enabled: Schema.boolean().default(true),
@@ -143,5 +141,3 @@ class UserManagementService extends Service {
         ctx.response.body = userDomains;
     }
 }
-
-module.exports = UserManagementService;

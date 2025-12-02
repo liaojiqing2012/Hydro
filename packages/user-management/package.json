@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "description": "User management plugin for Hydro",
   "main": "index.ts",
+  "repository": "https://github.com/hydro-dev/Hydro",
+  "author": "Your Name <your.email@example.com>",
+  "license": "AGPL-3.0-or-later",
+  "preferUnplugged": true,
   "hydro": {
     "type": "service"
   },
@@ -10,7 +14,7 @@
     "build": "tsc"
   },
   "dependencies": {
-    "hydrooj": "^1.0.0"
+    "hydrooj": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.0.0"
