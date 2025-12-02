@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+{% block title %}用户管理{% endblock %}
+{% block content %}
+<div class="section">
+    <div class="section__header">
+        <h1 class="section__title">用户管理</h1>
+    </div>
+    <div class="section__body">
+        <div class="data-table">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>用户ID</th>
+                        <th>用户名</th>
+                        <th>邮箱</th>
+                        <th>注册时间</th>
+                        <th>上次登录</th>
+                        <th>权限</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="user-list">
+                    <!-- 用户列表将通过JavaScript动态加载 -->
+                </tbody>
+            </table>
+        </div>
+        <div class="pagination" id="pagination">
+            <!-- 分页将通过JavaScript动态生成 -->
+        </div>
+    </div>
+</div>
+
+<script>
+    // 用户列表页面的JavaScript代码
+    async function loadUsers(page = 1) {
+        const response = await fetch(`/api/admin/users?page=${page}&limit=20`);
+        const data = await response.json();
+        
+        const userList = document.getElementById('user-list');
+        userList.innerHTML = '';
+        
+        data.users.forEach(user => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${user._id}</td>
+                <td>${user.uname}</td>
+                <td>${user.email}</td>
+                <td>${new Date(user.registerTime).toLocaleString()}</td>
+                <td>${user.lastLogin ? new Date(user.lastLogin).toLocaleString() : '从未登录'}</td>
+                <td>${user.permission}</td>
+                <td>
+                    <a href="/admin/users/${user._id}" class="button button--primary button--sm">详情</a>
+                    <a href="/admin/users/${user._id}/domains" class="button button--secondary button--sm">域权限</a>
+                </td>
+            `;
+            userList.appendChild(tr);
+        });
+        
+        // 生成分页
+        generatePagination(data.page, Math.ceil(data.total / data.limit));
+    }
+    
+    function generatePagination(currentPage, totalPages) {
+        const pagination = document.getElementById('pagination');
+        pagination.innerHTML = '';
+        
+        for (let i = 1; i <= totalPages; i++) {
+            const button = document.createElement('button');
+            button.className = `pagination__button ${i === currentPage ? 'pagination__button--active' : ''}`;
+            button.textContent = i;
+            button.onclick = () => loadUsers(i);
+            pagination.appendChild(button);
+        }
+    }
+    
+    // 页面加载时加载第一页
+    document.addEventListener('DOMContentLoaded', () => {
+        loadUsers();
+    });
+</script>
+{% endblock %}

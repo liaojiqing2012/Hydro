@@ -1,0 +1,18 @@
+{
+  "name": "@hydrooj/user-management",
+  "version": "1.0.0",
+  "description": "User management plugin for Hydro",
+  "main": "index.ts",
+  "hydro": {
+    "type": "service"
+  },
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "hydrooj": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
