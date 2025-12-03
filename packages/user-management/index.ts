@@ -1,4 +1,4 @@
-import { Context, Service, Handler, Schema, UserModel, DomainModel, UserFacingError, ForbiddenError } from 'hydrooj';
+import { Context, Service, Handler, Schema, UserModel, DomainModel, UserFacingError, ForbiddenError, PRIV } from 'hydrooj';
 import { join } from 'path';
 
 export default class UserManagementService extends Service {
@@ -40,13 +40,12 @@ export default class UserManagementService extends Service {
 
     private registerPages(ctx: Context) {
         // 注入到管理菜单
-        ctx.ui.registerMenuItem('admin', {
-            id: 'user-management',
+        ctx.ui.inject('ControlPanel', 'user-management', {
             text: '用户管理',
             href: '/admin/users',
-            order: 100,
             icon: 'account--multiple',
-        });
+            order: 100
+        }, PRIV.PRIV_EDIT_SYSTEM);
     }
     
     private async renderUserList(ctx: Handler) {
