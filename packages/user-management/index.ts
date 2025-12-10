@@ -26,23 +26,23 @@ export default class UserManagementService extends Service {
 
     private registerRoutes(ctx: Context) {
         // 用户管理页面路由
-        ctx.server.get('/admin/users', this.requireAdmin(), this.renderUserList.bind(this));
-        ctx.server.get('/admin/users/:uid', this.requireAdmin(), this.renderUserDetail.bind(this));
-        ctx.server.get('/admin/users/:uid/domains', this.requireAdmin(), this.renderUserDomains.bind(this));
+        ctx.server.get('/manage/users', this.requireAdmin(), this.renderUserList.bind(this));
+        ctx.server.get('/manage/users/:uid', this.requireAdmin(), this.renderUserDetail.bind(this));
+        ctx.server.get('/manage/users/:uid/domains', this.requireAdmin(), this.renderUserDomains.bind(this));
         
         // API路由
-        ctx.server.get('/api/admin/users', this.requireAdmin(), this.getUsers.bind(this));
-        ctx.server.get('/api/admin/users/:uid', this.requireAdmin(), this.getUserDetail.bind(this));
-        ctx.server.post('/api/admin/users/:uid/update', this.requireAdmin(), this.updateUser.bind(this));
-        ctx.server.post('/api/admin/users/:uid/change-password', this.requireAdmin(), this.changePassword.bind(this));
-        ctx.server.get('/api/admin/users/:uid/domains', this.requireAdmin(), this.getUserDomains.bind(this));
+        ctx.server.get('/api/manage/users', this.requireAdmin(), this.getUsers.bind(this));
+        ctx.server.get('/api/manage/users/:uid', this.requireAdmin(), this.getUserDetail.bind(this));
+        ctx.server.post('/api/manage/users/:uid/update', this.requireAdmin(), this.updateUser.bind(this));
+        ctx.server.post('/api/manage/users/:uid/change-password', this.requireAdmin(), this.changePassword.bind(this));
+        ctx.server.get('/api/manage/users/:uid/domains', this.requireAdmin(), this.getUserDomains.bind(this));
     }
 
     private registerPages(ctx: Context) {
         // 注入到管理菜单
         ctx.ui.inject('ControlPanel', 'user-management', {
             text: '用户管理',
-            href: '/admin/users',
+            href: '/manage/users',
             icon: 'account--multiple',
             order: 100
         }, PRIV.PRIV_EDIT_SYSTEM);
