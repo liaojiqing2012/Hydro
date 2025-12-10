@@ -1,0 +1,9 @@
+{
+    "name": "@hydrooj/user-management",
+    "version": "1.0.0",
+    "main": "index.ts",
+    "repository": "https://github.com/hydro-dev/Hydro",
+    "author": "Hydro Contributors",
+    "preferUnplugged": true,
+    "license": "AGPL-3.0-or-later"
+}
