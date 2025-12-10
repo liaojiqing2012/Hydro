@@ -13,24 +13,24 @@
         <label class="input-group">
           <span class="input-addon">{{ _('user_management_sort_by') }}</span>
           <select name="sort">
-            <option value="uid"{% if sort === 'uid' %} selected{% endif %}>{{ _('user_management_uid') }}</option>
-            <option value="uname"{% if sort === 'uname' %} selected{% endif %}>{{ _('user_management_uname') }}</option>
-            <option value="displayName"{% if sort === 'displayName' %} selected{% endif %}>{{ _('user_management_display_name') }}</option>
-            <option value="studentId"{% if sort === 'studentId' %} selected{% endif %}>{{ _('user_management_student_id') }}</option>
-            <option value="school"{% if sort === 'school' %} selected{% endif %}>{{ _('user_management_school') }}</option>
-            <option value="email"{% if sort === 'email' %} selected{% endif %}>{{ _('user_management_email') }}</option>
-            <option value="regat"{% if sort === 'regat' %} selected{% endif %}>{{ _('user_management_registered') }}</option>
-            <option value="loginat"{% if sort === 'loginat' %} selected{% endif %}>{{ _('user_management_last_login') }}</option>
-            <option value="role"{% if sort === 'role' %} selected{% endif %}>{{ _('user_management_role') }}</option>
-            <option value="priv"{% if sort === 'priv' %} selected{% endif %}>{{ _('user_management_privilege') }}</option>
-            <option value="loginip"{% if sort === 'loginip' %} selected{% endif %}>{{ _('user_management_last_login_ip') }}</option>
+              <option value="uid"{% if sort == 'uid' %} selected{% endif %}>{{ _('user_management_uid') }}</option>
+              <option value="uname"{% if sort == 'uname' %} selected{% endif %}>{{ _('user_management_uname') }}</option>
+              <option value="displayName"{% if sort == 'displayName' %} selected{% endif %}>{{ _('user_management_display_name') }}</option>
+              <option value="studentId"{% if sort == 'studentId' %} selected{% endif %}>{{ _('user_management_student_id') }}</option>
+              <option value="school"{% if sort == 'school' %} selected{% endif %}>{{ _('user_management_school') }}</option>
+              <option value="email"{% if sort == 'email' %} selected{% endif %}>{{ _('user_management_email') }}</option>
+              <option value="regat"{% if sort == 'regat' %} selected{% endif %}>{{ _('user_management_registered') }}</option>
+              <option value="loginat"{% if sort == 'loginat' %} selected{% endif %}>{{ _('user_management_last_login') }}</option>
+              <option value="role"{% if sort == 'role' %} selected{% endif %}>{{ _('user_management_role') }}</option>
+              <option value="priv"{% if sort == 'priv' %} selected{% endif %}>{{ _('user_management_privilege') }}</option>
+              <option value="loginip"{% if sort == 'loginip' %} selected{% endif %}>{{ _('user_management_last_login_ip') }}</option>
           </select>
         </label>
         <label class="input-group">
           <span class="input-addon">{{ _('user_management_sort_order') }}</span>
           <select name="order">
-            <option value="asc"{% if order === 'asc' %} selected{% endif %}>{{ _('user_management_sort_asc') }}</option>
-            <option value="desc"{% if order === 'desc' %} selected{% endif %}>{{ _('user_management_sort_desc') }}</option>
+              <option value="asc"{% if order == 'asc' %} selected{% endif %}>{{ _('user_management_sort_asc') }}</option>
+              <option value="desc"{% if order == 'desc' %} selected{% endif %}>{{ _('user_management_sort_desc') }}</option>
           </select>
         </label>
         <button class="primary rounded button" type="submit">
@@ -70,7 +70,7 @@
         </tr>
       </thead>
       <tbody>
-        {% if users.length === 0 %}
+        {% if users.length == 0 %}
         <tr>
           <td class="col--empty" colspan="11">{{ _('user_management_empty') }}</td>
         </tr>
@@ -79,15 +79,15 @@
           <tr>
             <td class="col--uid">{{ u._id }}</td>
             <td class="col--user"><a href="{{ url('user_detail', { uid: u._id }) }}">{{ u.uname }}</a></td>
-            <td class="col--user">{{ u.displayName || '-' }}</td>
-            <td class="col--student">{{ u.studentId || '-' }}</td>
-            <td class="col--school">{{ u.school || '-' }}</td>
+            <td class="col--user">{{ u.displayName or '-' }}</td>
+            <td class="col--student">{{ u.studentId or '-' }}</td>
+            <td class="col--school">{{ u.school or '-' }}</td>
             <td class="col--mail">{{ u.mail }}</td>
             <td class="col--role">{{ u.role }}</td>
             <td class="col--priv">{{ u.priv }}</td>
             <td class="col--date">{{ datetimeSpan(u.regat) | safe }}</td>
             <td class="col--date">{{ datetimeSpan(u.loginat) | safe }}</td>
-            <td class="col--ip">{{ u.loginip || '-' }}</td>
+            <td class="col--ip">{{ u.loginip or '-' }}</td>
           </tr>
           {% endfor %}
         {% endif %}
