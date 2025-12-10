@@ -3,6 +3,11 @@ import { join } from 'path';
 
 // 用户列表页面Handler
 class UserListHandler extends Handler {
+    // 添加prepare方法，检查管理页面所需权限
+    async prepare() {
+        this.checkPriv(PRIV.PRIV_EDIT_SYSTEM);
+    }
+    
     async get() {
         // 获取分页和搜索参数
         const page = parseInt(this.request.query.page || '1');
@@ -47,6 +52,11 @@ class UserListHandler extends Handler {
 
 // 用户详情页面Handler
 class UserDetailHandler extends Handler {
+    // 添加prepare方法，检查管理页面所需权限
+    async prepare() {
+        this.checkPriv(PRIV.PRIV_EDIT_SYSTEM);
+    }
+    
     async get() {
         // 渲染用户详情页面
         const uid = this.request.params.uid;
@@ -86,6 +96,11 @@ class UserDetailHandler extends Handler {
 
 // 用户域权限页面Handler
 class UserDomainsHandler extends Handler {
+    // 添加prepare方法，检查管理页面所需权限
+    async prepare() {
+        this.checkPriv(PRIV.PRIV_EDIT_SYSTEM);
+    }
+    
     async get() {
         // 渲染用户域权限页面
         const uid = this.request.params.uid;
@@ -148,9 +163,10 @@ export default class UserManagementService extends Service {
 
     private registerRoutes(ctx: Context) {
         // 使用ctx.Route注册页面路由
-        ctx.Route('user_management', '/manage/users', UserListHandler, PRIV.PRIV_EDIT_SYSTEM);
-        ctx.Route('user_detail', '/manage/users/:uid', UserDetailHandler, PRIV.PRIV_EDIT_SYSTEM);
-        ctx.Route('user_domains', '/manage/users/:uid/domains', UserDomainsHandler, PRIV.PRIV_EDIT_SYSTEM);
+        // 注意：这里不需要再指定权限，因为Handler类的prepare方法已经检查了权限
+        ctx.Route('user_management', '/manage/users', UserListHandler);
+        ctx.Route('user_detail', '/manage/users/:uid', UserDetailHandler);
+        ctx.Route('user_domains', '/manage/users/:uid/domains', UserDomainsHandler);
         
         // API路由（继续使用ctx.server.get）
         ctx.server.get('/api/manage/users', this.requireAdmin(), this.getUsers.bind(this));
