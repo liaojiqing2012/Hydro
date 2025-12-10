@@ -18,11 +18,15 @@ class UserManagementHandler extends Handler {
     @param('order', Types.String, true)
     async get(domainId: string, page = 1, keyword = '', sort = 'uid', order = 'asc') {
         const query: Filter<Udoc> = { _id: { $gte: 1 } };
-        if (keyword) {
-            const $regex = escapeRegExp(keyword.toLowerCase());
+        const trimmedKeyword = keyword.trim();
+        if (trimmedKeyword) {
+            const $regex = new RegExp(escapeRegExp(trimmedKeyword), 'i');
             query.$or = [
                 { unameLower: { $regex } },
                 { mailLower: { $regex } },
+                { displayName: { $regex } },
+                { studentId: { $regex } },
+                { school: { $regex } },
             ];
         }
         const SORT_FIELDS: Record<string, string> = {
