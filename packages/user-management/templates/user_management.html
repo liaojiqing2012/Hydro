@@ -51,8 +51,8 @@
             <td class="col--mail">{{ u.mail }}</td>
             <td class="col--role">{{ u.role }}</td>
             <td class="col--priv">{{ u.priv }}</td>
-            <td class="col--date">{{ u.regat | datetime }}</td>
-            <td class="col--date">{{ u.loginat | datetime }}</td>
+            <td class="col--date">{{ datetimeSpan(u.regat) | safe }}</td>
+            <td class="col--date">{{ datetimeSpan(u.loginat) | safe }}</td>
           </tr>
           {% endfor %}
         {% endif %}
