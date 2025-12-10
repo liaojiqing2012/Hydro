@@ -1,126 +1,142 @@
-import { escapeRegExp } from 'lodash';
-import {
-    Context, Handler, PRIV, Types, UserModel, param,
-} from 'hydrooj';
-import { Filter } from 'mongodb';
-import { Udoc } from '@hydrooj/framework/lib/interface';
+import { Context, Service, Handler, Schema, UserModel, DomainModel, UserFacingError, ForbiddenError, PRIV } from 'hydrooj';
+import { join } from 'path';
 
-const PAGE_SIZE = 20;
+export default class UserManagementService extends Service {
+    static inject = ['server', 'renderer'];
+    static Config = Schema.object({
+        enabled: Schema.boolean().default(true),
+        adminOnly: Schema.boolean().default(true),
+    });
 
-class UserManagementHandler extends Handler {
-    async prepare() {
-        this.checkPriv(PRIV.PRIV_EDIT_SYSTEM);
+    private templatePath: string;
+
+    constructor(ctx: Context, config: ReturnType<typeof UserManagementService.Config>) {
+        super(ctx, 'user-management');
+        if (!config.enabled) return;
+
+        // 设置模板路径
+        this.templatePath = join(__dirname, 'templates');
+        
+        // 注册路由
+        this.registerRoutes(ctx);
+        
+        // 注册页面
+        this.registerPages(ctx);
     }
 
-    @param('page', Types.PositiveInt, true)
-    @param('q', Types.String, true)
-    @param('sort', Types.String, true)
-    @param('order', Types.String, true)
-    async get(domainId: string, page = 1, keyword = '', sort = 'uid', order = 'asc') {
-        const query: Filter<Udoc> = { _id: { $gte: 1 } };
-        const trimmedKeyword = keyword.trim();
-        if (trimmedKeyword) {
-            const $regex = new RegExp(escapeRegExp(trimmedKeyword), 'i');
-            query.$or = [
-                { unameLower: { $regex } },
-                { mailLower: { $regex } },
-                { displayName: { $regex } },
-                { studentId: { $regex } },
-                { school: { $regex } },
-            ];
-        }
-        const SORT_FIELDS: Record<string, string> = {
-            uid: '_id',
-            uname: 'unameLower',
-            displayName: 'displayName',
-            studentId: 'studentId',
-            school: 'school',
-            email: 'mailLower',
-            role: 'role',
-            priv: 'priv',
-            regat: 'regat',
-            loginat: 'loginat',
-            loginip: 'loginip',
+    private registerRoutes(ctx: Context) {
+        // 用户管理页面路由
+        ctx.server.get('/admin/users', this.requireAdmin(), this.renderUserList.bind(this));
+        ctx.server.get('/admin/users/:uid', this.requireAdmin(), this.renderUserDetail.bind(this));
+        ctx.server.get('/admin/users/:uid/domains', this.requireAdmin(), this.renderUserDomains.bind(this));
+        
+        // API路由
+        ctx.server.get('/api/admin/users', this.requireAdmin(), this.getUsers.bind(this));
+        ctx.server.get('/api/admin/users/:uid', this.requireAdmin(), this.getUserDetail.bind(this));
+        ctx.server.post('/api/admin/users/:uid/update', this.requireAdmin(), this.updateUser.bind(this));
+        ctx.server.post('/api/admin/users/:uid/change-password', this.requireAdmin(), this.changePassword.bind(this));
+        ctx.server.get('/api/admin/users/:uid/domains', this.requireAdmin(), this.getUserDomains.bind(this));
+    }
+
+    private registerPages(ctx: Context) {
+        // 注入到管理菜单
+        ctx.ui.inject('ControlPanel', 'user-management', {
+            text: '用户管理',
+            href: '/admin/users',
+            icon: 'account--multiple',
+            order: 100
+        }, PRIV.PRIV_EDIT_SYSTEM);
+    }
+    
+    private async renderUserList(ctx: Handler) {
+        await ctx.render(join(this.templatePath, 'user_management.html'));
+    }
+    
+    private async renderUserDetail(ctx: Handler) {
+        await ctx.render(join(this.templatePath, 'user_management.html'));
+    }
+    
+    private async renderUserDomains(ctx: Handler) {
+        await ctx.render(join(this.templatePath, 'user_management.html'));
+    }
+
+    private requireAdmin(): Handler {
+        return async (ctx: Handler, next: () => Promise<void>) => {
+            if (!ctx.user || !ctx.user.hasPrivilege(PRIV.PRIV_EDIT_SYSTEM)) {
+                throw new ForbiddenError('Permission denied');
+            }
+            await next();
         };
-        const sortField = SORT_FIELDS[sort] ? sort : 'uid';
-        const sortOrder = order === 'desc' ? -1 : 1;
-        const sortSpec: Record<string, number> = { [SORT_FIELDS[sortField]]: sortOrder };
-        if (SORT_FIELDS[sortField] !== '_id') sortSpec._id = 1;
-        const skip = (Math.max(page, 1) - 1) * PAGE_SIZE;
-        const [total, users] = await Promise.all([
-            UserModel.coll.countDocuments(query),
-            UserModel.getMulti(
-                query,
-                ['_id', 'uname', 'displayName', 'studentId', 'school', 'mail', 'role', 'priv', 'regat', 'loginat', 'loginip'],
-            )
-                .sort(sortSpec)
-                .skip(skip)
-                .limit(PAGE_SIZE)
-                .toArray(),
+    }
+
+    private async getUsers(ctx: Handler) {
+        const page = parseInt(ctx.request.query.page || '1');
+        const limit = parseInt(ctx.request.query.limit || '20');
+        const skip = (page - 1) * limit;
+
+        const [users, total] = await Promise.all([
+            UserModel.getList({}, skip, limit),
+            UserModel.count({})
         ]);
-        const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-        const currentPage = Math.min(Math.max(page, 1), totalPages);
-        this.response.body = {
+
+        ctx.response.body = {
             users,
-            keyword,
-            page: currentPage,
             total,
-            totalPages,
-            pageSize: PAGE_SIZE,
-            sort: sortField,
-            order: sortOrder === 1 ? 'asc' : 'desc',
+            page,
+            limit
         };
-        this.response.pjax = 'user_management.html';
-        this.response.template = 'user_management.html';
+    }
+
+    private async getUserDetail(ctx: Handler) {
+        const uid = ctx.request.params.uid;
+        const user = await UserModel.getById(uid);
+        if (!user) {
+            throw new UserFacingError('User not found');
+        }
+        ctx.response.body = user;
+    }
+
+    private async updateUser(ctx: Handler) {
+        const uid = ctx.request.params.uid;
+        const { home, permission } = ctx.request.body;
+
+        await UserModel.update(uid, {
+            home,
+            permission
+        });
+
+        ctx.response.body = { success: true };
+    }
+
+    private async changePassword(ctx: Handler) {
+        const uid = ctx.request.params.uid;
+        const { password } = ctx.request.body;
+
+        if (!password || password.length < 6) {
+            throw new UserFacingError('Password must be at least 6 characters');
+        }
+
+        await UserModel.setPassword(uid, password);
+        ctx.response.body = { success: true };
+    }
+
+    private async getUserDomains(ctx: Handler) {
+        const uid = ctx.request.params.uid;
+        const domains = await DomainModel.getList({});
+        const userDomains = [];
+
+        for (const domain of domains) {
+            const userInDomain = await DomainModel.getUser(domain._id, uid);
+            if (userInDomain) {
+                userDomains.push({
+                    domain: domain._id,
+                    name: domain.name,
+                    permission: userInDomain.permission,
+                    role: userInDomain.role
+                });
+            }
+        }
+
+        ctx.response.body = userDomains;
     }
 }
-
-export async function apply(ctx: Context) {
-    ctx.injectUI('ControlPanel', 'user_management', { icon: 'account--multiple' }, PRIV.PRIV_EDIT_SYSTEM);
-    ctx.i18n.load('en', {
-        user_management: 'User Management',
-        user_management_description: 'Browse and audit user accounts.',
-        user_management_keyword: 'Keyword',
-        user_management_search: 'Search',
-        user_management_uid: 'User ID',
-        user_management_uname: 'Username',
-        user_management_display_name: 'Display Name',
-        user_management_student_id: 'Student ID',
-        user_management_school: 'School',
-        user_management_email: 'Email',
-        user_management_role: 'Role',
-        user_management_privilege: 'Privilege',
-        user_management_registered: 'Registered At',
-        user_management_last_login: 'Last Login',
-        user_management_last_login_ip: 'Last Login IP',
-        user_management_sort_by: 'Sort By',
-        user_management_sort_order: 'Order',
-        user_management_sort_asc: 'Ascending',
-        user_management_sort_desc: 'Descending',
-        user_management_empty: 'No users matched your query.',
-    });
-    ctx.i18n.load('zh', {
-        user_management: '用户管理',
-        user_management_description: '浏览和审核用户账户。',
-        user_management_keyword: '关键字',
-        user_management_search: '搜索',
-        user_management_uid: '用户 ID',
-        user_management_uname: '用户名',
-        user_management_display_name: '显示名称',
-        user_management_student_id: '学号',
-        user_management_school: '学校',
-        user_management_email: '邮箱',
-        user_management_role: '角色',
-        user_management_privilege: '权限值',
-        user_management_registered: '注册时间',
-        user_management_last_login: '最近登录',
-        user_management_last_login_ip: '最近登录 IP',
-        user_management_sort_by: '排序字段',
-        user_management_sort_order: '排序方式',
-        user_management_sort_asc: '升序',
-        user_management_sort_desc: '降序',
-        user_management_empty: '没有符合条件的用户。',
-    });
-    ctx.Route('user_management', '/manage/users', UserManagementHandler);
-}
-
