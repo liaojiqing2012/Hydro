@@ -1,0 +1,82 @@
+{% extends "manage_base.html" %}
+{% block manage_content %}
+<div class="section">
+  <div class="section__header">
+    <h1 class="section__title">{{ _('user_management') }}</h1>
+    <p class="section__desc">{{ _('user_management_description') }}</p>
+    <div class="section__tools">
+      <form class="inline" method="get" action="">
+        <label class="input-group">
+          <span class="input-addon">{{ _('user_management_keyword') }}</span>
+          <input type="text" name="q" value="{{ keyword }}" placeholder="{{ _('user_management_keyword') }}">
+        </label>
+        <button class="primary rounded button" type="submit">
+          <span class="icon icon-search"></span> {{ _('user_management_search') }}
+        </button>
+      </form>
+    </div>
+  </div>
+  <div class="section__body no-padding">
+    <table class="data-table">
+      <colgroup>
+        <col class="col--uid">
+        <col class="col--user">
+        <col class="col--mail">
+        <col class="col--role">
+        <col class="col--priv">
+        <col class="col--date">
+        <col class="col--date">
+      </colgroup>
+      <thead>
+        <tr>
+          <th class="col--uid">{{ _('user_management_uid') }}</th>
+          <th class="col--user">{{ _('user_management_uname') }}</th>
+          <th class="col--mail">{{ _('user_management_email') }}</th>
+          <th class="col--role">{{ _('user_management_role') }}</th>
+          <th class="col--priv">{{ _('user_management_privilege') }}</th>
+          <th class="col--date">{{ _('user_management_registered') }}</th>
+          <th class="col--date">{{ _('user_management_last_login') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if users.length === 0 %}
+        <tr>
+          <td class="col--empty" colspan="7">{{ _('user_management_empty') }}</td>
+        </tr>
+        {% else %}
+          {% for u in users %}
+          <tr>
+            <td class="col--uid">{{ u._id }}</td>
+            <td class="col--user">{{ u.uname }}</td>
+            <td class="col--mail">{{ u.mail }}</td>
+            <td class="col--role">{{ u.role }}</td>
+            <td class="col--priv">{{ u.priv }}</td>
+            <td class="col--date">{{ u.regat | datetime }}</td>
+            <td class="col--date">{{ u.loginat | datetime }}</td>
+          </tr>
+          {% endfor %}
+        {% endif %}
+      </tbody>
+      {% if totalPages > 1 %}
+      <tfoot>
+        <tr>
+          <td colspan="7" class="pagination">
+            <div class="row align-middle">
+              <div class="columns small-6">{{ _('Page {0} / {1}', page, totalPages) }}</div>
+              <div class="columns small-6 align-right">
+                {% if page > 1 %}
+                  <a class="button" href="{{ url('user_management', { page: page - 1, q: keyword }) }}">&laquo; {{ _('Prev') }}</a>
+                {% endif %}
+                {% if page < totalPages %}
+                  <a class="button" href="{{ url('user_management', { page: page + 1, q: keyword }) }}">{{ _('Next') }} &raquo;</a>
+                {% endif %}
+              </div>
+            </div>
+          </td>
+        </tr>
+      </tfoot>
+      {% endif %}
+    </table>
+  </div>
+</div>
+{% endblock %}
