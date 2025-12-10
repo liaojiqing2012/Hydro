@@ -14,7 +14,9 @@ class UserManagementHandler extends Handler {
 
     @param('page', Types.PositiveInt, true)
     @param('q', Types.String, true)
-    async get(domainId: string, page = 1, keyword = '') {
+    @param('sort', Types.String, true)
+    @param('order', Types.String, true)
+    async get(domainId: string, page = 1, keyword = '', sort = 'uid', order = 'asc') {
         const query: Filter<Udoc> = { _id: { $gte: 1 } };
         if (keyword) {
             const $regex = escapeRegExp(keyword.toLowerCase());
@@ -23,11 +25,31 @@ class UserManagementHandler extends Handler {
                 { mailLower: { $regex } },
             ];
         }
+        const SORT_FIELDS: Record<string, string> = {
+            uid: '_id',
+            uname: 'unameLower',
+            displayName: 'displayName',
+            studentId: 'studentId',
+            school: 'school',
+            email: 'mailLower',
+            role: 'role',
+            priv: 'priv',
+            regat: 'regat',
+            loginat: 'loginat',
+            loginip: 'loginip',
+        };
+        const sortField = SORT_FIELDS[sort] ? sort : 'uid';
+        const sortOrder = order === 'desc' ? -1 : 1;
+        const sortSpec: Record<string, number> = { [SORT_FIELDS[sortField]]: sortOrder };
+        if (SORT_FIELDS[sortField] !== '_id') sortSpec._id = 1;
         const skip = (Math.max(page, 1) - 1) * PAGE_SIZE;
         const [total, users] = await Promise.all([
             UserModel.coll.countDocuments(query),
-            UserModel.getMulti(query, ['_id', 'uname', 'mail', 'role', 'priv', 'regat', 'loginat'])
-                .sort({ _id: 1 })
+            UserModel.getMulti(
+                query,
+                ['_id', 'uname', 'displayName', 'studentId', 'school', 'mail', 'role', 'priv', 'regat', 'loginat', 'loginip'],
+            )
+                .sort(sortSpec)
                 .skip(skip)
                 .limit(PAGE_SIZE)
                 .toArray(),
@@ -41,6 +63,8 @@ class UserManagementHandler extends Handler {
             total,
             totalPages,
             pageSize: PAGE_SIZE,
+            sort: sortField,
+            order: sortOrder === 1 ? 'asc' : 'desc',
         };
         this.response.pjax = 'user_management.html';
         this.response.template = 'user_management.html';
@@ -56,11 +80,19 @@ export async function apply(ctx: Context) {
         user_management_search: 'Search',
         user_management_uid: 'User ID',
         user_management_uname: 'Username',
+        user_management_display_name: 'Display Name',
+        user_management_student_id: 'Student ID',
+        user_management_school: 'School',
         user_management_email: 'Email',
         user_management_role: 'Role',
         user_management_privilege: 'Privilege',
         user_management_registered: 'Registered At',
         user_management_last_login: 'Last Login',
+        user_management_last_login_ip: 'Last Login IP',
+        user_management_sort_by: 'Sort By',
+        user_management_sort_order: 'Order',
+        user_management_sort_asc: 'Ascending',
+        user_management_sort_desc: 'Descending',
         user_management_empty: 'No users matched your query.',
     });
     ctx.i18n.load('zh', {
@@ -70,11 +102,19 @@ export async function apply(ctx: Context) {
         user_management_search: '搜索',
         user_management_uid: '用户 ID',
         user_management_uname: '用户名',
+        user_management_display_name: '显示名称',
+        user_management_student_id: '学号',
+        user_management_school: '学校',
         user_management_email: '邮箱',
         user_management_role: '角色',
         user_management_privilege: '权限值',
         user_management_registered: '注册时间',
         user_management_last_login: '最近登录',
+        user_management_last_login_ip: '最近登录 IP',
+        user_management_sort_by: '排序字段',
+        user_management_sort_order: '排序方式',
+        user_management_sort_asc: '升序',
+        user_management_sort_desc: '降序',
         user_management_empty: '没有符合条件的用户。',
     });
     ctx.Route('user_management', '/manage/users', UserManagementHandler);
