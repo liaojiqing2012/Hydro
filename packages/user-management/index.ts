@@ -1,5 +1,127 @@
-import { Context, Service, Handler, Schema, UserModel, DomainModel, UserFacingError, ForbiddenError, PRIV } from 'hydrooj';
+import { Context, Service, Handler, Schema, UserModel, DomainModel, UserFacingError, ForbiddenError, PRIV, PERM } from 'hydrooj';
 import { join } from 'path';
+
+// 用户列表页面Handler
+class UserListHandler extends Handler {
+    async get() {
+        // 获取分页和搜索参数
+        const page = parseInt(this.request.query.page || '1');
+        const limit = parseInt(this.request.query.limit || '20');
+        const skip = (page - 1) * limit;
+        const keyword = this.request.query.q || '';
+        const sort = this.request.query.sort || 'uid';
+        const order = this.request.query.order || 'asc';
+        
+        // 构建搜索条件
+        const query: any = {};
+        if (keyword) {
+            query.$or = [
+                { uname: { $regex: keyword, $options: 'i' } },
+                { mail: { $regex: keyword, $options: 'i' } },
+                { _id: keyword }
+            ];
+        }
+        
+        // 获取用户列表数据
+        const [users, total] = await Promise.all([
+            UserModel.getList(query, skip, limit),
+            UserModel.count(query)
+        ]);
+        
+        const totalPages = Math.ceil(total / limit);
+        
+        // 渲染用户列表页面
+        this.response.template = 'user_management.html';
+        this.response.body = {
+            title: '用户管理',
+            users,
+            total,
+            totalPages,
+            page,
+            keyword,
+            sort,
+            order,
+        };
+    }
+}
+
+// 用户详情页面Handler
+class UserDetailHandler extends Handler {
+    async get() {
+        // 渲染用户详情页面
+        const uid = this.request.params.uid;
+        const user = await UserModel.getById(uid);
+        
+        if (!user) {
+            throw new UserFacingError('User not found');
+        }
+        
+        // 获取用户域权限
+        const domains = await DomainModel.getList({});
+        const userDomains = await Promise.all(
+            domains.map(async (domain) => {
+                const userInDomain = await DomainModel.getUser(domain._id, uid);
+                if (userInDomain) {
+                    return {
+                        domain: domain._id,
+                        name: domain.name,
+                        permission: userInDomain.permission,
+                        role: userInDomain.role
+                    };
+                }
+                return null;
+            })
+        );
+        
+        this.response.template = 'user_management.html';
+        this.response.body = {
+            title: '用户详情',
+            uid,
+            user,
+            userDomains: userDomains.filter(Boolean),
+            domains
+        };
+    }
+}
+
+// 用户域权限页面Handler
+class UserDomainsHandler extends Handler {
+    async get() {
+        // 渲染用户域权限页面
+        const uid = this.request.params.uid;
+        const user = await UserModel.getById(uid);
+        
+        if (!user) {
+            throw new UserFacingError('User not found');
+        }
+        
+        // 获取用户域权限
+        const domains = await DomainModel.getList({});
+        const userDomains = await Promise.all(
+            domains.map(async (domain) => {
+                const userInDomain = await DomainModel.getUser(domain._id, uid);
+                if (userInDomain) {
+                    return {
+                        domain: domain._id,
+                        name: domain.name,
+                        permission: userInDomain.permission,
+                        role: userInDomain.role
+                    };
+                }
+                return null;
+            })
+        );
+        
+        this.response.template = 'user_management.html';
+        this.response.body = {
+            title: '用户域权限',
+            uid,
+            user,
+            userDomains: userDomains.filter(Boolean),
+            domains
+        };
+    }
+}
 
 export default class UserManagementService extends Service {
     static inject = ['server', 'renderer'];
@@ -25,12 +147,12 @@ export default class UserManagementService extends Service {
     }
 
     private registerRoutes(ctx: Context) {
-        // 用户管理页面路由
-        ctx.server.get('/manage/users', this.requireAdmin(), this.renderUserList.bind(this));
-        ctx.server.get('/manage/users/:uid', this.requireAdmin(), this.renderUserDetail.bind(this));
-        ctx.server.get('/manage/users/:uid/domains', this.requireAdmin(), this.renderUserDomains.bind(this));
+        // 使用ctx.Route注册页面路由
+        ctx.Route('user_management', '/manage/users', UserListHandler, PRIV.PRIV_EDIT_SYSTEM);
+        ctx.Route('user_detail', '/manage/users/:uid', UserDetailHandler, PRIV.PRIV_EDIT_SYSTEM);
+        ctx.Route('user_domains', '/manage/users/:uid/domains', UserDomainsHandler, PRIV.PRIV_EDIT_SYSTEM);
         
-        // API路由
+        // API路由（继续使用ctx.server.get）
         ctx.server.get('/api/manage/users', this.requireAdmin(), this.getUsers.bind(this));
         ctx.server.get('/api/manage/users/:uid', this.requireAdmin(), this.getUserDetail.bind(this));
         ctx.server.post('/api/manage/users/:uid/update', this.requireAdmin(), this.updateUser.bind(this));
@@ -47,18 +169,6 @@ export default class UserManagementService extends Service {
             order: 100
         }, PRIV.PRIV_EDIT_SYSTEM);
     }
-    
-    private async renderUserList(ctx: Handler) {
-        await ctx.render(join(this.templatePath, 'user_management.html'));
-    }
-    
-    private async renderUserDetail(ctx: Handler) {
-        await ctx.render(join(this.templatePath, 'user_management.html'));
-    }
-    
-    private async renderUserDomains(ctx: Handler) {
-        await ctx.render(join(this.templatePath, 'user_management.html'));
-    }
 
     private requireAdmin(): Handler {
         return async (ctx: Handler, next: () => Promise<void>) => {
@@ -73,17 +183,32 @@ export default class UserManagementService extends Service {
         const page = parseInt(ctx.request.query.page || '1');
         const limit = parseInt(ctx.request.query.limit || '20');
         const skip = (page - 1) * limit;
+        const keyword = ctx.request.query.q as string;
+        const sort = ctx.request.query.sort as string || 'uid';
+        const order = ctx.request.query.order as string || 'asc';
+        
+        // 构建搜索条件
+        const query: any = {};
+        if (keyword) {
+            query.$or = [
+                { uname: { $regex: keyword, $options: 'i' } },
+                { mail: { $regex: keyword, $options: 'i' } },
+                { _id: keyword }
+            ];
+        }
 
         const [users, total] = await Promise.all([
-            UserModel.getList({}, skip, limit),
-            UserModel.count({})
+            UserModel.getList(query, skip, limit),
+            UserModel.count(query)
         ]);
 
         ctx.response.body = {
             users,
             total,
             page,
-            limit
+            limit,
+            sort,
+            order
         };
     }
 
@@ -99,7 +224,12 @@ export default class UserManagementService extends Service {
     private async updateUser(ctx: Handler) {
         const uid = ctx.request.params.uid;
         const { home, permission } = ctx.request.body;
-
+        
+        // 添加参数验证
+        if (permission && typeof permission !== 'string') {
+            throw new UserFacingError('Invalid permission format');
+        }
+        
         await UserModel.update(uid, {
             home,
             permission
@@ -123,20 +253,24 @@ export default class UserManagementService extends Service {
     private async getUserDomains(ctx: Handler) {
         const uid = ctx.request.params.uid;
         const domains = await DomainModel.getList({});
-        const userDomains = [];
-
-        for (const domain of domains) {
-            const userInDomain = await DomainModel.getUser(domain._id, uid);
-            if (userInDomain) {
-                userDomains.push({
-                    domain: domain._id,
-                    name: domain.name,
-                    permission: userInDomain.permission,
-                    role: userInDomain.role
-                });
-            }
-        }
-
-        ctx.response.body = userDomains;
+        
+        // 并行查询所有域的用户权限，提高效率
+        const userDomains = await Promise.all(
+            domains.map(async (domain) => {
+                const userInDomain = await DomainModel.getUser(domain._id, uid);
+                if (userInDomain) {
+                    return {
+                        domain: domain._id,
+                        name: domain.name,
+                        permission: userInDomain.permission,
+                        role: userInDomain.role
+                    };
+                }
+                return null;
+            })
+        );
+        
+        // 过滤掉null值
+        ctx.response.body = userDomains.filter(Boolean);
     }
 }
