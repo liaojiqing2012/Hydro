@@ -6,18 +6,34 @@ class UserManagementHandler extends Handler {
         // 权限检查
         this.checkPriv(PRIV.PRIV_EDIT_SYSTEM);
         
-        // 查询用户列表
-        const users = await UserModel.getList({}, 0, 20);
-        const total = await UserModel.count({});
+        // 获取domainId
+        const domainId = this.request.query.domainId || 'system';
         
-        // 返回响应
+        // 查询用户列表
+        // 1. 获取所有用户ID
+        const cursor = UserModel.getMulti({});
+        const udocs = await cursor.toArray();
+        const uids = udocs.map(udoc => udoc._id).slice(0, 20);
+        
+        // 2. 获取用户详细信息
+        const userDict = await UserModel.getList(domainId, uids);
+        const users = Object.values(userDict);
+        
+        // 3. 获取总数
+        const total = udocs.length;
+        
+        // 设置模板和数据，让框架自动渲染
+        this.response.template = 'user_management.html';
         this.response.body = {
             title: '用户管理',
             users,
             total,
             page: 1,
             limit: 20,
-            message: '用户管理插件已加载'
+            totalPages: Math.ceil(total / 20),
+            keyword: this.request.query.q || '',
+            sort: this.request.query.sort || 'uid',
+            order: this.request.query.order || 'asc'
         };
     }
 }
@@ -32,10 +48,20 @@ class UserManagementApiHandler extends Handler {
         const page = parseInt(this.request.query.page || '1');
         const limit = parseInt(this.request.query.limit || '20');
         const skip = (page - 1) * limit;
+        const domainId = this.request.query.domainId || 'system';
         
         // 查询用户列表
-        const users = await UserModel.getList({}, skip, limit);
-        const total = await UserModel.count({});
+        // 1. 获取所有用户ID
+        const cursor = UserModel.getMulti({});
+        const udocs = await cursor.toArray();
+        const uids = udocs.map(udoc => udoc._id).slice(skip, skip + limit);
+        
+        // 2. 获取用户详细信息
+        const userDict = await UserModel.getList(domainId, uids);
+        const users = Object.values(userDict);
+        
+        // 3. 获取总数
+        const total = udocs.length;
         
         // 返回响应
         this.response.body = {
@@ -53,11 +79,12 @@ class UserDetailHandler extends Handler {
         // 权限检查
         this.checkPriv(PRIV.PRIV_EDIT_SYSTEM);
         
-        // 获取用户ID
-        const uid = this.request.params.uid;
+        // 获取用户ID和domainId
+        const uid = parseInt(this.request.params.uid);
+        const domainId = this.request.query.domainId || 'system';
         
         // 查询用户详情
-        const user = await UserModel.getById(uid);
+        const user = await UserModel.getById(domainId, uid);
         if (!user) {
             this.response.status = 404;
             this.response.body = { error: 'User not found' };
