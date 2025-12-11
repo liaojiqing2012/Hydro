@@ -2,6 +2,21 @@
 
 A Hydro plugin that adds a control panel page for comprehensive user management. It provides administrators with tools to view, edit, and manage user accounts and their permissions across domains.
 
+## Prerequisites
+
+- The plugin is installed and enabled (enabled by default).
+- You are signed in with an account that has the `PRIV_EDIT_SYSTEM` privilege.
+
+## How to access the page
+
+- **From the Control Panel**
+  1. Visit the Control Panel at `/manage`.
+  2. In the left sidebar, click **User Management** (用户管理).
+  3. You will land on the user list at `/manage/users`.
+- **Direct link**
+  - Navigate directly to `/manage/users` for the list view.
+  - Open `/manage/users/<uid>` to view a specific user, and `/manage/users/<uid>/domains` to check their domain permissions.
+
 ## Features
 
 - Adds a "User Management" entry to the admin Control Panel (requires `PRIV_EDIT_SYSTEM`).
@@ -21,38 +36,24 @@ A Hydro plugin that adds a control panel page for comprehensive user management.
 - Pagination support (20 users per page)
 - Responsive design with consistent UI
 
-## Usage
+## Usage tips
 
-### Installation
-
-1. Ensure the plugin is installed in your Hydro instance.
-2. The plugin is enabled by default, but you can configure it in your Hydro settings.
-
-### Accessing User Management
-
-1. Sign in to Hydro with an account that has `PRIV_EDIT_SYSTEM` privileges.
-2. Navigate to the **Control Panel** (`/manage`).
-3. Click on the **User Management** link in the sidebar menu.
-4. Alternatively, you can directly access the user management page at `/manage/users`.
-
-### Using the User Management Interface
-
-#### User List View
+### User list view
 - **Search**: Enter keywords in the search box to filter users by username, email, or user ID.
 - **Sort**: Select a field from the "Sort by" dropdown to sort users.
 - **Order**: Choose ascending or descending order from the "Sort order" dropdown.
 - **Navigation**: Use the pagination controls at the bottom to navigate between pages.
-- **View Details**: Click on a username to view detailed information about a user.
+- **View details**: Click on a username to view detailed information about a user.
 
-#### User Detail View
-- **View Information**: See comprehensive details about a specific user.
-- **Edit Profile**: Update user information including home page and permissions.
-- **Change Password**: Set a new password for the user.
-- **Domain Permissions**: Click on the "Domain Permissions" link to view the user's permissions across all domains.
+### User detail view
+- **View information**: See comprehensive details about a specific user.
+- **Edit profile**: Update user information including home page and permissions.
+- **Change password**: Set a new password for the user.
+- **Domain permissions**: Click on the "Domain Permissions" link to view the user's permissions across all domains.
 
-#### Domain Permissions View
-- **Domain List**: See all domains the user has access to.
-- **Permission Details**: View the user's role and permission level in each domain.
+### Domain permissions view
+- **Domain list**: See all domains the user has access to.
+- **Permission details**: View the user's role and permission level in each domain.
 
 ## Configuration
 
@@ -61,7 +62,7 @@ The plugin supports the following configuration options:
 - `enabled`: Boolean, default `true` - Whether the plugin is enabled.
 - `adminOnly`: Boolean, default `true` - Whether only administrators can access the user management page.
 
-## Development Notes
+## Development notes
 
 ### Architecture
 - **Frontend**: Uses Hydro's template system with `user_management.html` for rendering all views.
@@ -71,12 +72,12 @@ The plugin supports the following configuration options:
   - `UserDomainsHandler`: Handles the domain permissions view.
 - **API**: Provides RESTful API endpoints for client-side interactions.
 
-### Key Files
+### Key files
 - `index.ts`: Main plugin logic, Handler classes, and API endpoints.
 - `templates/user_management.html`: Template file for all user management views.
 - `package.json`: Plugin configuration and dependencies.
 
-### API Endpoints
+### API endpoints
 
 The plugin exposes the following API endpoints:
 
