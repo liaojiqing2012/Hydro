@@ -1,4 +1,5 @@
-import { Context, Service, Handler, Schema, UserModel, DomainModel, UserFacingError, PRIV, db } from 'hydrooj';
+import { Context, Service, Handler, Schema, UserModel, DomainModel, UserFacingError, ForbiddenError, PRIV, PERM } from 'hydrooj';
+import { join } from 'path';
 
 // 用户列表页面Handler
 class UserListHandler extends Handler {
@@ -15,21 +16,6 @@ class UserListHandler extends Handler {
         const keyword = this.request.query.q || '';
         const sort = this.request.query.sort || 'uid';
         const order = this.request.query.order || 'asc';
-
-        const sortKey = {
-            uid: '_id',
-            uname: 'uname',
-            displayName: 'displayName',
-            studentId: 'studentId',
-            school: 'school',
-            email: 'mail',
-            regat: 'regat',
-            loginat: 'loginat',
-            role: 'role',
-            priv: 'priv',
-            loginip: 'loginip',
-        }[sort] || '_id';
-        const sortOrder = order === 'desc' ? -1 : 1;
         
         // 构建搜索条件
         const query: any = {};
@@ -42,15 +28,9 @@ class UserListHandler extends Handler {
         }
         
         // 获取用户列表数据
-        const userColl = db.collection('user');
         const [users, total] = await Promise.all([
-            userColl
-                .find(query)
-                .sort({ [sortKey]: sortOrder })
-                .skip(skip)
-                .limit(limit)
-                .toArray(),
-            userColl.countDocuments(query),
+            UserModel.getList(query, skip, limit),
+            UserModel.count(query)
         ]);
         
         const totalPages = Math.ceil(total / limit);
@@ -79,28 +59,28 @@ class UserDetailHandler extends Handler {
     
     async get() {
         // 渲染用户详情页面
-        const uid = Number(this.request.params.uid);
-        const user = await UserModel.getById(this.domainId, uid);
+        const uid = this.request.params.uid;
+        const user = await UserModel.getById(uid);
         
         if (!user) {
             throw new UserFacingError('User not found');
         }
         
         // 获取用户域权限
-        const domains = await DomainModel.coll.find({}).toArray();
+        const domains = await DomainModel.getList({});
         const userDomains = await Promise.all(
             domains.map(async (domain) => {
-                const userInDomain = await DomainModel.collUser.findOne({ domainId: domain._id, uid });
+                const userInDomain = await DomainModel.getUser(domain._id, uid);
                 if (userInDomain) {
                     return {
                         domain: domain._id,
                         name: domain.name,
-                        permission: userInDomain.perm,
-                        role: userInDomain.role,
+                        permission: userInDomain.permission,
+                        role: userInDomain.role
                     };
                 }
                 return null;
-            }),
+            })
         );
         
         this.response.template = 'user_management.html';
@@ -123,28 +103,28 @@ class UserDomainsHandler extends Handler {
     
     async get() {
         // 渲染用户域权限页面
-        const uid = Number(this.request.params.uid);
-        const user = await UserModel.getById(this.domainId, uid);
+        const uid = this.request.params.uid;
+        const user = await UserModel.getById(uid);
         
         if (!user) {
             throw new UserFacingError('User not found');
         }
         
         // 获取用户域权限
-        const domains = await DomainModel.coll.find({}).toArray();
+        const domains = await DomainModel.getList({});
         const userDomains = await Promise.all(
             domains.map(async (domain) => {
-                const userInDomain = await DomainModel.collUser.findOne({ domainId: domain._id, uid });
+                const userInDomain = await DomainModel.getUser(domain._id, uid);
                 if (userInDomain) {
                     return {
                         domain: domain._id,
                         name: domain.name,
-                        permission: userInDomain.perm,
-                        role: userInDomain.role,
+                        permission: userInDomain.permission,
+                        role: userInDomain.role
                     };
                 }
                 return null;
-            }),
+            })
         );
         
         this.response.template = 'user_management.html';
@@ -159,16 +139,21 @@ class UserDomainsHandler extends Handler {
 }
 
 export default class UserManagementService extends Service {
-    static inject = ['server'];
+    static inject = ['server', 'renderer'];
     static Config = Schema.object({
         enabled: Schema.boolean().default(true),
         adminOnly: Schema.boolean().default(true),
     });
 
+    private templatePath: string;
+
     constructor(ctx: Context, config: ReturnType<typeof UserManagementService.Config>) {
         super(ctx, 'user-management');
         if (!config.enabled) return;
 
+        // 设置模板路径
+        this.templatePath = join(__dirname, 'templates');
+        
         // 注册路由
         this.registerRoutes(ctx);
         
@@ -182,53 +167,45 @@ export default class UserManagementService extends Service {
         ctx.Route('user_management', '/manage/users', UserListHandler);
         ctx.Route('user_detail', '/manage/users/:uid', UserDetailHandler);
         ctx.Route('user_domains', '/manage/users/:uid/domains', UserDomainsHandler);
-
-        // API 路由
-        ctx.Route('api_manage_users', '/api/manage/users', ManageUsersApiHandler);
-        ctx.Route('api_manage_user_detail', '/api/manage/users/:uid', ManageUserDetailApiHandler);
-        ctx.Route('api_manage_user_update', '/api/manage/users/:uid/update', ManageUserUpdateApiHandler);
-        ctx.Route('api_manage_user_change_password', '/api/manage/users/:uid/change-password', ManageUserChangePasswordApiHandler);
-        ctx.Route('api_manage_user_domains', '/api/manage/users/:uid/domains', ManageUserDomainsApiHandler);
+        
+        // API路由（继续使用ctx.server.get）
+        ctx.server.get('/api/manage/users', this.requireAdmin(), this.getUsers.bind(this));
+        ctx.server.get('/api/manage/users/:uid', this.requireAdmin(), this.getUserDetail.bind(this));
+        ctx.server.post('/api/manage/users/:uid/update', this.requireAdmin(), this.updateUser.bind(this));
+        ctx.server.post('/api/manage/users/:uid/change-password', this.requireAdmin(), this.changePassword.bind(this));
+        ctx.server.post('/api/manage/users/:uid/toggle-status', this.requireAdmin(), this.toggleUserStatus.bind(this));
+        ctx.server.delete('/api/manage/users/:uid', this.requireAdmin(), this.deleteUser.bind(this));
+        ctx.server.post('/api/manage/users/batch', this.requireAdmin(), this.batchUpdateUsers.bind(this));
+        ctx.server.get('/api/manage/users/:uid/domains', this.requireAdmin(), this.getUserDomains.bind(this));
     }
 
     private registerPages(ctx: Context) {
         // 注入到管理菜单
-        ctx.injectUI('ControlPanel', 'user_management', {
+        ctx.ui.inject('ControlPanel', 'user-management', {
+            text: '用户管理',
+            href: '/manage/users',
             icon: 'account--multiple',
             order: 100
         }, PRIV.PRIV_EDIT_SYSTEM);
     }
 
-}
-
-class ManageUsersApiHandler extends Handler {
-    async prepare() {
-        this.checkPriv(PRIV.PRIV_EDIT_SYSTEM);
+    private requireAdmin(): Handler {
+        return async (ctx: Handler, next: () => Promise<void>) => {
+            if (!ctx.user || !ctx.user.hasPrivilege(PRIV.PRIV_EDIT_SYSTEM)) {
+                throw new ForbiddenError('Permission denied');
+            }
+            await next();
+        };
     }
 
-    async get() {
-        const page = parseInt(this.request.query.page || '1');
-        const limit = parseInt(this.request.query.limit || '20');
+    private async getUsers(ctx: Handler) {
+        const page = parseInt(ctx.request.query.page || '1');
+        const limit = parseInt(ctx.request.query.limit || '20');
         const skip = (page - 1) * limit;
-        const keyword = this.request.query.q as string;
-        const sort = this.request.query.sort as string || 'uid';
-        const order = this.request.query.order as string || 'asc';
-
-        const sortKey = {
-            uid: '_id',
-            uname: 'uname',
-            displayName: 'displayName',
-            studentId: 'studentId',
-            school: 'school',
-            email: 'mail',
-            regat: 'regat',
-            loginat: 'loginat',
-            role: 'role',
-            priv: 'priv',
-            loginip: 'loginip',
-        }[sort] || '_id';
-        const sortOrder = order === 'desc' ? -1 : 1;
-
+        const keyword = ctx.request.query.q as string;
+        const sort = ctx.request.query.sort as string || 'uid';
+        const order = ctx.request.query.order as string || 'asc';
+        
         // 构建搜索条件
         const query: any = {};
         if (keyword) {
@@ -239,18 +216,12 @@ class ManageUsersApiHandler extends Handler {
             ];
         }
 
-        const userColl = db.collection('user');
         const [users, total] = await Promise.all([
-            userColl
-                .find(query)
-                .sort({ [sortKey]: sortOrder })
-                .skip(skip)
-                .limit(limit)
-                .toArray(),
-            userColl.countDocuments(query),
+            UserModel.getList(query, skip, limit),
+            UserModel.count(query)
         ]);
 
-        this.response.body = {
+        ctx.response.body = {
             users,
             total,
             page,
@@ -259,96 +230,148 @@ class ManageUsersApiHandler extends Handler {
             order
         };
     }
-}
 
-class ManageUserDetailApiHandler extends Handler {
-    async prepare() {
-        this.checkPriv(PRIV.PRIV_EDIT_SYSTEM);
-    }
-
-    async get() {
-        const uid = Number(this.request.params.uid);
-        const user = await UserModel.getById(this.domainId, uid);
+    private async getUserDetail(ctx: Handler) {
+        const uid = ctx.request.params.uid;
+        const user = await UserModel.getById(uid);
         if (!user) {
             throw new UserFacingError('User not found');
         }
-        this.response.body = user;
-    }
-}
-
-class ManageUserUpdateApiHandler extends Handler {
-    async prepare() {
-        this.checkPriv(PRIV.PRIV_EDIT_SYSTEM);
+        ctx.response.body = user;
     }
 
-    async post() {
-        const uid = Number(this.request.params.uid);
-        const { home, permission } = this.request.body;
-
+    private async updateUser(ctx: Handler) {
+        const uid = ctx.request.params.uid;
+        const { 
+            displayName, 
+            studentId, 
+            school, 
+            home, 
+            permission 
+        } = ctx.request.body;
+        
         // 添加参数验证
         if (permission && typeof permission !== 'string') {
             throw new UserFacingError('Invalid permission format');
         }
+        
+        // 更新用户信息
+        await UserModel.update(uid, {
+            displayName,
+            studentId,
+            school,
+            home,
+            permission
+        });
 
-        const update: Record<string, any> = {};
-        if (home !== undefined) update.home = home;
-        if (permission !== undefined) {
-            try {
-                update.perm = BigInt(permission);
-            } catch (e) {
-                throw new UserFacingError('Invalid permission format');
-            }
-        }
-        await UserModel.setById(uid, update);
-
-        this.response.body = { success: true };
-    }
-}
-
-class ManageUserChangePasswordApiHandler extends Handler {
-    async prepare() {
-        this.checkPriv(PRIV.PRIV_EDIT_SYSTEM);
+        ctx.response.body = { success: true };
     }
 
-    async post() {
-        const uid = Number(this.request.params.uid);
-        const { password } = this.request.body;
+    private async changePassword(ctx: Handler) {
+        const uid = ctx.request.params.uid;
+        const { password } = ctx.request.body;
 
         if (!password || password.length < 6) {
             throw new UserFacingError('Password must be at least 6 characters');
         }
 
         await UserModel.setPassword(uid, password);
-        this.response.body = { success: true };
-    }
-}
-
-class ManageUserDomainsApiHandler extends Handler {
-    async prepare() {
-        this.checkPriv(PRIV.PRIV_EDIT_SYSTEM);
+        ctx.response.body = { success: true };
     }
 
-    async get() {
-        const uid = Number(this.request.params.uid);
-        const domains = await DomainModel.coll.find({}).toArray();
-
+    private async getUserDomains(ctx: Handler) {
+        const uid = ctx.request.params.uid;
+        const domains = await DomainModel.getList({});
+        
         // 并行查询所有域的用户权限，提高效率
         const userDomains = await Promise.all(
             domains.map(async (domain) => {
-                const userInDomain = await DomainModel.collUser.findOne({ domainId: domain._id, uid });
+                const userInDomain = await DomainModel.getUser(domain._id, uid);
                 if (userInDomain) {
                     return {
                         domain: domain._id,
                         name: domain.name,
-                        permission: userInDomain.perm,
-                        role: userInDomain.role,
+                        permission: userInDomain.permission,
+                        role: userInDomain.role
                     };
                 }
                 return null;
-            }),
+            })
         );
-
+        
         // 过滤掉null值
-        this.response.body = userDomains.filter(Boolean);
+        ctx.response.body = userDomains.filter(Boolean);
+    }
+    
+    // 新增：切换用户状态（启用/禁用）
+    private async toggleUserStatus(ctx: Handler) {
+        const uid = ctx.request.params.uid;
+        const user = await UserModel.getById(uid);
+        
+        if (!user) {
+            throw new UserFacingError('User not found');
+        }
+        
+        // 切换用户状态
+        const newStatus = !user.disabled;
+        await UserModel.update(uid, {
+            disabled: newStatus
+        });
+        
+        ctx.response.body = { success: true, disabled: newStatus };
+    }
+    
+    // 新增：删除用户
+    private async deleteUser(ctx: Handler) {
+        const uid = ctx.request.params.uid;
+        
+        // 检查是否存在该用户
+        const user = await UserModel.getById(uid);
+        if (!user) {
+            throw new UserFacingError('User not found');
+        }
+        
+        // 删除用户
+        await UserModel.remove(uid);
+        
+        ctx.response.body = { success: true };
+    }
+    
+    // 新增：批量操作（删除、启用、禁用）
+    private async batchUpdateUsers(ctx: Handler) {
+        const { action, uids } = ctx.request.body;
+        
+        if (!uids || !Array.isArray(uids) || uids.length === 0) {
+            throw new UserFacingError('No users selected');
+        }
+        
+        // 批量操作
+        switch (action) {
+            case 'delete':
+                // 批量删除用户
+                await Promise.all(
+                    uids.map(uid => UserModel.remove(uid))
+                );
+                break;
+            
+            case 'enable':
+                // 批量启用用户
+                await Promise.all(
+                    uids.map(uid => UserModel.update(uid, { disabled: false }))
+                );
+                break;
+            
+            case 'disable':
+                // 批量禁用用户
+                await Promise.all(
+                    uids.map(uid => UserModel.update(uid, { disabled: true }))
+                );
+                break;
+            
+            default:
+                throw new UserFacingError('Invalid action');
+        }
+        
+        ctx.response.body = { success: true, action, count: uids.length };
     }
 }
