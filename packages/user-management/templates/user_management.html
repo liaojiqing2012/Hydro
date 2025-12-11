@@ -113,8 +113,8 @@
                   <li><a href="#" class="edit-user" data-uid="{{ u._id }}"><span class="icon icon-pencil"></span> {{ _('user_management_edit') }}</a></li>
                   <li><a href="#" class="reset-password" data-uid="{{ u._id }}"><span class="icon icon-key"></span> {{ _('user_management_reset_password') }}</a></li>
                   <li><a href="{{ url('user_domains', { uid: u._id }) }}"><span class="icon icon-domain"></span> {{ _('user_management_domains') }}</a></li>
-                  <li><a href="#" class="toggle-user-status" data-uid="{{ u._id }}" data-status="{{ u.disabled ? 'enable' : 'disable' }}">
-                    <span class="icon icon-{{ u.disabled ? 'check' : 'x' }}"></span> {{ u.disabled ? _('user_management_enable') : _('user_management_disable') }}
+                  <li><a href="#" class="toggle-user-status" data-uid="{{ u._id }}" data-status="{% if u.disabled %}enable{% else %}disable{% endif %}">
+                    <span class="icon icon-{% if u.disabled %}check{% else %}x{% endif %}"></span> {% if u.disabled %}{{ _('user_management_enable') }}{% else %}{{ _('user_management_disable') }}{% endif %}
                   </a></li>
                   <li class="divider"></li>
                   <li class="danger"><a href="#" class="delete-user" data-uid="{{ u._id }}"><span class="icon icon-trash"></span> {{ _('user_management_delete') }}</a></li>
