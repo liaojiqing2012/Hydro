@@ -231,39 +231,39 @@ select:focus {
 <div class="user-management">
 <div class="section">
   <div class="section__header">
-    <h1 class="section__title">{{ _('user_management') }}</h1>
-    <p class="section__desc">{{ _('user_management_description') }}</p>
+    <h1 class="section__title">用户管理</h1>
+    <p class="section__desc">管理系统用户账户和权限</p>
     <div class="section__tools">
       <form class="inline" method="get" action="">
         <label class="input-group">
-          <span class="input-addon">{{ _('user_management_keyword') }}</span>
-          <input type="text" name="q" value="{{ keyword }}" placeholder="{{ _('user_management_keyword') }}">
+          <span class="input-addon">关键词</span>
+          <input type="text" name="q" value="{{ keyword }}" placeholder="关键词">
         </label>
         <label class="input-group">
-          <span class="input-addon">{{ _('user_management_sort_by') }}</span>
+          <span class="input-addon">排序方式</span>
           <select name="sort">
-              <option value="uid"{% if sort == 'uid' %} selected{% endif %}>{{ _('user_management_uid') }}</option>
-              <option value="uname"{% if sort == 'uname' %} selected{% endif %}>{{ _('user_management_uname') }}</option>
-              <option value="displayName"{% if sort == 'displayName' %} selected{% endif %}>{{ _('user_management_display_name') }}</option>
-              <option value="studentId"{% if sort == 'studentId' %} selected{% endif %}>{{ _('user_management_student_id') }}</option>
-              <option value="school"{% if sort == 'school' %} selected{% endif %}>{{ _('user_management_school') }}</option>
-              <option value="email"{% if sort == 'email' %} selected{% endif %}>{{ _('user_management_email') }}</option>
-              <option value="regat"{% if sort == 'regat' %} selected{% endif %}>{{ _('user_management_registered') }}</option>
-              <option value="loginat"{% if sort == 'loginat' %} selected{% endif %}>{{ _('user_management_last_login') }}</option>
-              <option value="role"{% if sort == 'role' %} selected{% endif %}>{{ _('user_management_role') }}</option>
-              <option value="priv"{% if sort == 'priv' %} selected{% endif %}>{{ _('user_management_privilege') }}</option>
-              <option value="loginip"{% if sort == 'loginip' %} selected{% endif %}>{{ _('user_management_last_login_ip') }}</option>
+              <option value="uid"{% if sort == 'uid' %} selected{% endif %}>用户ID</option>
+              <option value="uname"{% if sort == 'uname' %} selected{% endif %}>用户名</option>
+              <option value="displayName"{% if sort == 'displayName' %} selected{% endif %}>显示名称</option>
+              <option value="studentId"{% if sort == 'studentId' %} selected{% endif %}>学号</option>
+              <option value="school"{% if sort == 'school' %} selected{% endif %}>学校</option>
+              <option value="email"{% if sort == 'email' %} selected{% endif %}>邮箱</option>
+              <option value="regat"{% if sort == 'regat' %} selected{% endif %}>注册时间</option>
+              <option value="loginat"{% if sort == 'loginat' %} selected{% endif %}>最后登录</option>
+              <option value="role"{% if sort == 'role' %} selected{% endif %}>角色</option>
+              <option value="priv"{% if sort == 'priv' %} selected{% endif %}>权限</option>
+              <option value="loginip"{% if sort == 'loginip' %} selected{% endif %}>最后登录IP</option>
           </select>
         </label>
         <label class="input-group">
-          <span class="input-addon">{{ _('user_management_sort_order') }}</span>
+          <span class="input-addon">排序顺序</span>
           <select name="order">
-              <option value="asc"{% if order == 'asc' %} selected{% endif %}>{{ _('user_management_sort_asc') }}</option>
-              <option value="desc"{% if order == 'desc' %} selected{% endif %}>{{ _('user_management_sort_desc') }}</option>
+              <option value="asc"{% if order == 'asc' %} selected{% endif %}>升序</option>
+              <option value="desc"{% if order == 'desc' %} selected{% endif %}>降序</option>
           </select>
         </label>
         <button class="primary rounded button" type="submit">
-          <span class="icon icon-search"></span> {{ _('user_management_search') }}
+          <span class="icon icon-search"></span> 搜索
         </button>
       </form>
     </div>
@@ -293,24 +293,24 @@ select:focus {
               <span class="checkbox"></span>
             </label>
           </th>
-          <th class="col--uid">{{ _('user_management_uid') }}</th>
-          <th class="col--user">{{ _('user_management_uname') }}</th>
-          <th class="col--user">{{ _('user_management_display_name') }}</th>
-          <th class="col--student">{{ _('user_management_student_id') }}</th>
-          <th class="col--school">{{ _('user_management_school') }}</th>
-          <th class="col--mail">{{ _('user_management_email') }}</th>
-          <th class="col--role">{{ _('user_management_role') }}</th>
-          <th class="col--priv">{{ _('user_management_privilege') }}</th>
-          <th class="col--date">{{ _('user_management_registered') }}</th>
-          <th class="col--date">{{ _('user_management_last_login') }}</th>
-          <th class="col--ip">{{ _('user_management_last_login_ip') }}</th>
-          <th class="col--action">{{ _('user_management_actions') }}</th>
+          <th class="col--uid">用户ID</th>
+          <th class="col--user">用户名</th>
+          <th class="col--user">显示名称</th>
+          <th class="col--student">学号</th>
+          <th class="col--school">学校</th>
+          <th class="col--mail">邮箱</th>
+          <th class="col--role">角色</th>
+          <th class="col--priv">权限</th>
+          <th class="col--date">注册时间</th>
+          <th class="col--date">最后登录</th>
+          <th class="col--ip">最后登录IP</th>
+          <th class="col--action">操作</th>
         </tr>
       </thead>
       <tbody>
         {% if users.length == 0 %}
         <tr>
-          <td class="col--empty" colspan="13">{{ _('user_management_empty') }}</td>
+          <td class="col--empty" colspan="13">暂无用户</td>
         </tr>
         {% else %}
           {% for u in users %}
@@ -335,18 +335,18 @@ select:focus {
             <td class="col--action">
               <div class="dropdown">
                 <button class="small button dropdown-toggle" type="button">
-                  {{ _('user_management_actions') }}
+                  操作
                 </button>
                 <ul class="dropdown-menu">
-                  <li><a href="{{ url('user_detail', { uid: u._id }) }}"><span class="icon icon-eye"></span> {{ _('user_management_view') }}</a></li>
-                  <li><a href="#" class="edit-user" data-uid="{{ u._id }}"><span class="icon icon-pencil"></span> {{ _('user_management_edit') }}</a></li>
-                  <li><a href="#" class="reset-password" data-uid="{{ u._id }}"><span class="icon icon-key"></span> {{ _('user_management_reset_password') }}</a></li>
-                  <li><a href="{{ url('user_domains', { uid: u._id }) }}"><span class="icon icon-domain"></span> {{ _('user_management_domains') }}</a></li>
+                  <li><a href="{{ url('user_detail', { uid: u._id }) }}"><span class="icon icon-eye"></span> 查看</a></li>
+                  <li><a href="#" class="edit-user" data-uid="{{ u._id }}"><span class="icon icon-pencil"></span> 编辑</a></li>
+                  <li><a href="#" class="reset-password" data-uid="{{ u._id }}"><span class="icon icon-key"></span> 重置密码</a></li>
+                  <li><a href="{{ url('user_domains', { uid: u._id }) }}"><span class="icon icon-domain"></span> 域权限</a></li>
                   <li><a href="#" class="toggle-user-status" data-uid="{{ u._id }}" data-status="{% if u.disabled %}enable{% else %}disable{% endif %}">
-                    <span class="icon icon-{% if u.disabled %}check{% else %}x{% endif %}"></span> {% if u.disabled %}{{ _('user_management_enable') }}{% else %}{{ _('user_management_disable') }}{% endif %}
+                    <span class="icon icon-{% if u.disabled %}check{% else %}x{% endif %}"></span> {% if u.disabled %}启用{% else %}禁用{% endif %}
                   </a></li>
                   <li class="divider"></li>
-                  <li class="danger"><a href="#" class="delete-user" data-uid="{{ u._id }}"><span class="icon icon-trash"></span> {{ _('user_management_delete') }}</a></li>
+                  <li class="danger"><a href="#" class="delete-user" data-uid="{{ u._id }}"><span class="icon icon-trash"></span> 删除</a></li>
                 </ul>
               </div>
             </td>
@@ -381,7 +381,7 @@ select:focus {
 <div class="modal" id="edit-user-modal">
   <div class="modal-container">
     <div class="modal-header">
-      <h3>{{ _('user_management_edit_user') }}</h3>
+      <h3>编辑用户</h3>
       <button class="modal-close">&times;</button>
     </div>
     <div class="modal-body">
@@ -389,37 +389,37 @@ select:focus {
         <input type="hidden" name="uid" id="edit-uid">
         <div class="row">
           <div class="columns small-12">
-            <label>{{ _('user_management_display_name') }}
+            <label>显示名称
               <input type="text" name="displayName" id="edit-displayName">
             </label>
           </div>
           <div class="columns small-12 medium-6">
-            <label>{{ _('user_management_student_id') }}
+            <label>学号
               <input type="text" name="studentId" id="edit-studentId">
             </label>
           </div>
           <div class="columns small-12 medium-6">
-            <label>{{ _('user_management_school') }}
+            <label>学校
               <input type="text" name="school" id="edit-school">
             </label>
           </div>
           <div class="columns small-12">
-            <label>{{ _('user_management_home_page') }}
+            <label>主页
               <input type="text" name="home" id="edit-home" placeholder="https://example.com">
             </label>
           </div>
           <div class="columns small-12">
-            <label>{{ _('user_management_permission') }}
+            <label>权限
               <input type="text" name="permission" id="edit-permission" placeholder="user,admin">
             </label>
-            <p class="help-text">{{ _('user_management_permission_help') }}</p>
+            <p class="help-text">请输入权限标识符，多个权限用逗号分隔</p>
           </div>
         </div>
       </form>
     </div>
     <div class="modal-footer">
-      <button class="button" data-close-modal>{{ _('Cancel') }}</button>
-      <button class="primary button" id="save-user-changes">{{ _('Save Changes') }}</button>
+      <button class="button" data-close-modal>取消</button>
+      <button class="primary button" id="save-user-changes">保存更改</button>
     </div>
   </div>
 </div>
@@ -428,7 +428,7 @@ select:focus {
 <div class="modal" id="reset-password-modal">
   <div class="modal-container">
     <div class="modal-header">
-      <h3>{{ _('user_management_reset_password') }}</h3>
+      <h3>重置密码</h3>
       <button class="modal-close">&times;</button>
     </div>
     <div class="modal-body">
@@ -436,21 +436,21 @@ select:focus {
         <input type="hidden" name="uid" id="reset-uid">
         <div class="row">
           <div class="columns small-12">
-            <label>{{ _('user_management_new_password') }}
-              <input type="password" name="password" id="new-password" placeholder="{{ _('user_management_new_password_placeholder') }}">
+            <label>新密码
+              <input type="password" name="password" id="new-password" placeholder="请输入新密码">
             </label>
           </div>
           <div class="columns small-12">
-            <label>{{ _('user_management_confirm_password') }}
-              <input type="password" name="confirmPassword" id="confirm-password" placeholder="{{ _('user_management_confirm_password_placeholder') }}">
+            <label>确认密码
+              <input type="password" name="confirmPassword" id="confirm-password" placeholder="请再次输入新密码">
             </label>
           </div>
         </div>
       </form>
     </div>
     <div class="modal-footer">
-      <button class="button" data-close-modal>{{ _('Cancel') }}</button>
-      <button class="primary button" id="confirm-reset-password">{{ _('Reset Password') }}</button>
+      <button class="button" data-close-modal>取消</button>
+      <button class="primary button" id="confirm-reset-password">重置密码</button>
     </div>
   </div>
 </div>
@@ -461,9 +461,9 @@ select:focus {
     <div class="row">
       <div class="columns small-12">
         <div class="batch-actions">
-          <button class="button" id="batch-delete"><span class="icon icon-trash"></span> {{ _('user_management_batch_delete') }}</button>
-          <button class="button" id="batch-enable"><span class="icon icon-check"></span> {{ _('user_management_batch_enable') }}</button>
-          <button class="button" id="batch-disable"><span class="icon icon-x"></span> {{ _('user_management_batch_disable') }}</button>
+          <button class="button" id="batch-delete"><span class="icon icon-trash"></span> 批量删除</button>
+          <button class="button" id="batch-enable"><span class="icon icon-check"></span> 批量启用</button>
+          <button class="button" id="batch-disable"><span class="icon icon-x"></span> 批量禁用</button>
         </div>
       </div>
     </div>
@@ -507,7 +507,7 @@ select:focus {
         e.preventDefault();
         const uid = this.dataset.uid;
         const status = this.dataset.status;
-        if (confirm(status === 'disable' ? '{{ _('user_management_confirm_disable') }}' : '{{ _('user_management_confirm_enable') }}')) {
+        if (confirm(status === 'disable' ? '确定要禁用该用户吗？' : '确定要启用该用户吗？')) {
           // 这里可以通过AJAX切换用户状态
           location.reload();
         }
@@ -519,7 +519,7 @@ select:focus {
       link.addEventListener('click', function(e) {
         e.preventDefault();
         const uid = this.dataset.uid;
-        if (confirm('{{ _('user_management_confirm_delete') }}')) {
+        if (confirm('确定要删除该用户吗？')) {
           // 这里可以通过AJAX删除用户
           location.reload();
         }
@@ -538,9 +538,9 @@ select:focus {
       const password = document.getElementById('new-password').value;
       const confirmPassword = document.getElementById('confirm-password').value;
       if (password !== confirmPassword) {
-        alert('{{ _('user_management_password_mismatch') }}');
-        return;
-      }
+          alert('两次输入的密码不匹配');
+          return;
+        }
       // 这里可以通过AJAX重置密码
       document.getElementById('reset-password-modal').classList.remove('active');
       location.reload();
@@ -550,10 +550,10 @@ select:focus {
     document.getElementById('batch-delete').addEventListener('click', function() {
       const selectedUids = Array.from(document.querySelectorAll('input[name="uids"]:checked')).map(checkbox => checkbox.value);
       if (selectedUids.length === 0) {
-        alert('{{ _('user_management_select_users') }}');
+        alert('请选择要操作的用户');
         return;
       }
-      if (confirm('{{ _('user_management_confirm_batch_delete') }}')) {
+      if (confirm('确定要批量删除选中的用户吗？')) {
         // 这里可以通过AJAX批量删除用户
         location.reload();
       }
@@ -563,7 +563,7 @@ select:focus {
     document.getElementById('batch-enable').addEventListener('click', function() {
       const selectedUids = Array.from(document.querySelectorAll('input[name="uids"]:checked')).map(checkbox => checkbox.value);
       if (selectedUids.length === 0) {
-        alert('{{ _('user_management_select_users') }}');
+        alert('请选择要操作的用户');
         return;
       }
       // 这里可以通过AJAX批量启用用户
