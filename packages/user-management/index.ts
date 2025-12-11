@@ -138,6 +138,200 @@ class UserDomainsHandler extends Handler {
     }
 }
 
+// API Handler类
+class UserApiHandler extends Handler {
+    async get() {
+        const uid = this.request.params.uid;
+        
+        if (uid) {
+            // 获取单个用户详情
+            const user = await UserModel.getById(uid);
+            if (!user) {
+                throw new UserFacingError('User not found');
+            }
+            this.response.body = user;
+        } else {
+            // 获取用户列表
+            const page = parseInt(this.request.query.page || '1');
+            const limit = parseInt(this.request.query.limit || '20');
+            const skip = (page - 1) * limit;
+            const keyword = this.request.query.q as string;
+            const sort = this.request.query.sort as string || 'uid';
+            const order = this.request.query.order as string || 'asc';
+            
+            // 构建搜索条件
+            const query: any = {};
+            if (keyword) {
+                query.$or = [
+                    { uname: { $regex: keyword, $options: 'i' } },
+                    { mail: { $regex: keyword, $options: 'i' } },
+                    { _id: keyword }
+                ];
+            }
+
+            const [users, total] = await Promise.all([
+                UserModel.getList(query, skip, limit),
+                UserModel.count(query)
+            ]);
+
+            this.response.body = {
+                users,
+                total,
+                page,
+                limit,
+                sort,
+                order
+            };
+        }
+    }
+    
+    async post() {
+        const uid = this.request.params.uid;
+        const { action } = this.request.body;
+        
+        if (!uid) {
+            // 批量操作
+            const { uids } = this.request.body;
+            
+            if (!uids || !Array.isArray(uids) || uids.length === 0) {
+                throw new UserFacingError('No users selected');
+            }
+            
+            // 批量操作
+            switch (action) {
+                case 'delete':
+                    // 批量删除用户
+                    await Promise.all(
+                        uids.map(uid => UserModel.remove(uid))
+                    );
+                    break;
+                
+                case 'enable':
+                    // 批量启用用户
+                    await Promise.all(
+                        uids.map(uid => UserModel.update(uid, { disabled: false }))
+                    );
+                    break;
+                
+                case 'disable':
+                    // 批量禁用用户
+                    await Promise.all(
+                        uids.map(uid => UserModel.update(uid, { disabled: true }))
+                    );
+                    break;
+                
+                default:
+                    throw new UserFacingError('Invalid action');
+            }
+            
+            this.response.body = { success: true, action, count: uids.length };
+            return;
+        }
+        
+        // 单个用户操作
+        const user = await UserModel.getById(uid);
+        if (!user) {
+            throw new UserFacingError('User not found');
+        }
+        
+        switch (action) {
+            case 'update':
+                // 更新用户信息
+                const { 
+                    displayName, 
+                    studentId, 
+                    school, 
+                    home, 
+                    permission 
+                } = this.request.body;
+                
+                // 添加参数验证
+                if (permission && typeof permission !== 'string') {
+                    throw new UserFacingError('Invalid permission format');
+                }
+                
+                await UserModel.update(uid, {
+                    displayName,
+                    studentId,
+                    school,
+                    home,
+                    permission
+                });
+                break;
+            
+            case 'change-password':
+                // 修改密码
+                const { password } = this.request.body;
+                if (!password || password.length < 6) {
+                    throw new UserFacingError('Password must be at least 6 characters');
+                }
+                await UserModel.setPassword(uid, password);
+                break;
+            
+            case 'toggle-status':
+                // 切换用户状态
+                const newStatus = !user.disabled;
+                await UserModel.update(uid, {
+                    disabled: newStatus
+                });
+                this.response.body = { success: true, disabled: newStatus };
+                return;
+            
+            case 'delete':
+                // 删除用户
+                await UserModel.remove(uid);
+                break;
+            
+            default:
+                throw new UserFacingError('Invalid action');
+        }
+        
+        this.response.body = { success: true };
+    }
+    
+    async delete() {
+        const uid = this.request.params.uid;
+        
+        // 检查是否存在该用户
+        const user = await UserModel.getById(uid);
+        if (!user) {
+            throw new UserFacingError('User not found');
+        }
+        
+        // 删除用户
+        await UserModel.remove(uid);
+        
+        this.response.body = { success: true };
+    }
+}
+
+// 用户域权限API Handler
+class UserDomainsApiHandler extends Handler {
+    async get() {
+        const uid = this.request.params.uid;
+        const domains = await DomainModel.getList({});
+        
+        // 并行查询所有域的用户权限，提高效率
+        const userDomains = await Promise.all(
+            domains.map(async (domain) => {
+                const userInDomain = await DomainModel.getUser(domain._id, uid);
+                if (userInDomain) {
+                    return {
+                        domain: domain._id,
+                        name: domain.name,
+                        permission: userInDomain.permission,
+                        role: userInDomain.role
+                    };
+                }
+                return null;
+            })
+        );
+        
+        // 过滤掉null值
+        this.response.body = userDomains.filter(Boolean);
+    }
+}
+
 export default class UserManagementService extends Service {
     // 移除renderer依赖，只保留server依赖
     static inject = ['server'];
@@ -164,20 +358,14 @@ export default class UserManagementService extends Service {
 
     private registerRoutes(ctx: Context) {
         // 使用ctx.Route注册页面路由
-        // 注意：这里不需要再指定权限，因为Handler类的prepare方法已经检查了权限
-        ctx.Route('user_management', '/manage/users', UserListHandler);
-        ctx.Route('user_detail', '/manage/users/:uid', UserDetailHandler);
-        ctx.Route('user_domains', '/manage/users/:uid/domains', UserDomainsHandler);
+        ctx.Route('user_management', '/manage/users', UserListHandler, PRIV.PRIV_EDIT_SYSTEM);
+        ctx.Route('user_detail', '/manage/users/:uid', UserDetailHandler, PRIV.PRIV_EDIT_SYSTEM);
+        ctx.Route('user_domains', '/manage/users/:uid/domains', UserDomainsHandler, PRIV.PRIV_EDIT_SYSTEM);
         
-        // API路由（继续使用ctx.server.get）
-        ctx.server.get('/api/manage/users', this.requireAdmin(), this.getUsers.bind(this));
-        ctx.server.get('/api/manage/users/:uid', this.requireAdmin(), this.getUserDetail.bind(this));
-        ctx.server.post('/api/manage/users/:uid/update', this.requireAdmin(), this.updateUser.bind(this));
-        ctx.server.post('/api/manage/users/:uid/change-password', this.requireAdmin(), this.changePassword.bind(this));
-        ctx.server.post('/api/manage/users/:uid/toggle-status', this.requireAdmin(), this.toggleUserStatus.bind(this));
-        ctx.server.delete('/api/manage/users/:uid', this.requireAdmin(), this.deleteUser.bind(this));
-        ctx.server.post('/api/manage/users/batch', this.requireAdmin(), this.batchUpdateUsers.bind(this));
-        ctx.server.get('/api/manage/users/:uid/domains', this.requireAdmin(), this.getUserDomains.bind(this));
+        // 使用ctx.Route注册API路由
+        ctx.Route('user_api', '/api/manage/users', UserApiHandler, PRIV.PRIV_EDIT_SYSTEM);
+        ctx.Route('user_api_detail', '/api/manage/users/:uid', UserApiHandler, PRIV.PRIV_EDIT_SYSTEM);
+        ctx.Route('user_domains_api', '/api/manage/users/:uid/domains', UserDomainsApiHandler, PRIV.PRIV_EDIT_SYSTEM);
     }
 
     private registerPages(ctx: Context) {
@@ -188,191 +376,5 @@ export default class UserManagementService extends Service {
             icon: 'account--multiple',
             order: 100
         }, PRIV.PRIV_EDIT_SYSTEM);
-    }
-
-    private requireAdmin(): Handler {
-        return async (ctx: Handler, next: () => Promise<void>) => {
-            if (!ctx.user || !ctx.user.hasPrivilege(PRIV.PRIV_EDIT_SYSTEM)) {
-                throw new ForbiddenError('Permission denied');
-            }
-            await next();
-        };
-    }
-
-    private async getUsers(ctx: Handler) {
-        const page = parseInt(ctx.request.query.page || '1');
-        const limit = parseInt(ctx.request.query.limit || '20');
-        const skip = (page - 1) * limit;
-        const keyword = ctx.request.query.q as string;
-        const sort = ctx.request.query.sort as string || 'uid';
-        const order = ctx.request.query.order as string || 'asc';
-        
-        // 构建搜索条件
-        const query: any = {};
-        if (keyword) {
-            query.$or = [
-                { uname: { $regex: keyword, $options: 'i' } },
-                { mail: { $regex: keyword, $options: 'i' } },
-                { _id: keyword }
-            ];
-        }
-
-        const [users, total] = await Promise.all([
-            UserModel.getList(query, skip, limit),
-            UserModel.count(query)
-        ]);
-
-        ctx.response.body = {
-            users,
-            total,
-            page,
-            limit,
-            sort,
-            order
-        };
-    }
-
-    private async getUserDetail(ctx: Handler) {
-        const uid = ctx.request.params.uid;
-        const user = await UserModel.getById(uid);
-        if (!user) {
-            throw new UserFacingError('User not found');
-        }
-        ctx.response.body = user;
-    }
-
-    private async updateUser(ctx: Handler) {
-        const uid = ctx.request.params.uid;
-        const { 
-            displayName, 
-            studentId, 
-            school, 
-            home, 
-            permission 
-        } = ctx.request.body;
-        
-        // 添加参数验证
-        if (permission && typeof permission !== 'string') {
-            throw new UserFacingError('Invalid permission format');
-        }
-        
-        // 更新用户信息
-        await UserModel.update(uid, {
-            displayName,
-            studentId,
-            school,
-            home,
-            permission
-        });
-
-        ctx.response.body = { success: true };
-    }
-
-    private async changePassword(ctx: Handler) {
-        const uid = ctx.request.params.uid;
-        const { password } = ctx.request.body;
-
-        if (!password || password.length < 6) {
-            throw new UserFacingError('Password must be at least 6 characters');
-        }
-
-        await UserModel.setPassword(uid, password);
-        ctx.response.body = { success: true };
-    }
-
-    private async getUserDomains(ctx: Handler) {
-        const uid = ctx.request.params.uid;
-        const domains = await DomainModel.getList({});
-        
-        // 并行查询所有域的用户权限，提高效率
-        const userDomains = await Promise.all(
-            domains.map(async (domain) => {
-                const userInDomain = await DomainModel.getUser(domain._id, uid);
-                if (userInDomain) {
-                    return {
-                        domain: domain._id,
-                        name: domain.name,
-                        permission: userInDomain.permission,
-                        role: userInDomain.role
-                    };
-                }
-                return null;
-            })
-        );
-        
-        // 过滤掉null值
-        ctx.response.body = userDomains.filter(Boolean);
-    }
-    
-    // 新增：切换用户状态（启用/禁用）
-    private async toggleUserStatus(ctx: Handler) {
-        const uid = ctx.request.params.uid;
-        const user = await UserModel.getById(uid);
-        
-        if (!user) {
-            throw new UserFacingError('User not found');
-        }
-        
-        // 切换用户状态
-        const newStatus = !user.disabled;
-        await UserModel.update(uid, {
-            disabled: newStatus
-        });
-        
-        ctx.response.body = { success: true, disabled: newStatus };
-    }
-    
-    // 新增：删除用户
-    private async deleteUser(ctx: Handler) {
-        const uid = ctx.request.params.uid;
-        
-        // 检查是否存在该用户
-        const user = await UserModel.getById(uid);
-        if (!user) {
-            throw new UserFacingError('User not found');
-        }
-        
-        // 删除用户
-        await UserModel.remove(uid);
-        
-        ctx.response.body = { success: true };
-    }
-    
-    // 新增：批量操作（删除、启用、禁用）
-    private async batchUpdateUsers(ctx: Handler) {
-        const { action, uids } = ctx.request.body;
-        
-        if (!uids || !Array.isArray(uids) || uids.length === 0) {
-            throw new UserFacingError('No users selected');
-        }
-        
-        // 批量操作
-        switch (action) {
-            case 'delete':
-                // 批量删除用户
-                await Promise.all(
-                    uids.map(uid => UserModel.remove(uid))
-                );
-                break;
-            
-            case 'enable':
-                // 批量启用用户
-                await Promise.all(
-                    uids.map(uid => UserModel.update(uid, { disabled: false }))
-                );
-                break;
-            
-            case 'disable':
-                // 批量禁用用户
-                await Promise.all(
-                    uids.map(uid => UserModel.update(uid, { disabled: true }))
-                );
-                break;
-            
-            default:
-                throw new UserFacingError('Invalid action');
-        }
-        
-        ctx.response.body = { success: true, action, count: uids.length };
     }
 }
