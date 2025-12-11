@@ -1,0 +1,286 @@
+{% import "components/user.html" as user with context %}
+{% import "components/form.html" as form with context %}
+{% extends "manage_base.html" %}
+
+{% block manage_content %}
+<div class="section">
+  <div class="section__header">
+    <h1 class="section__title">{{ _('User Detail') }} - {{ udoc.uname }} (#{{ udoc._id }})</h1>
+    <div class="section__tools">
+      <a href="{{ url('user_management') }}" class="rounded button">
+        <span class="icon icon-back"></span> {{ _('Back to List') }}
+      </a>
+    </div>
+  </div>
+  
+  <!-- 用户基本信息 -->
+  <div class="section__body">
+    <div class="row">
+      <div class="medium-8 columns">
+        <h3>{{ _('Basic Information') }}</h3>
+        <form method="post">
+          <input type="hidden" name="operation" value="edit">
+          <div class="row">
+            <div class="medium-6 columns">
+              {{ form.form_text({
+                label: _('User ID'),
+                name: 'uid',
+                value: udoc._id,
+                readonly: true
+              }) }}
+            </div>
+            <div class="medium-6 columns">
+              {{ form.form_text({
+                label: _('Username'),
+                name: 'uname',
+                value: udoc.uname,
+                required: true
+              }) }}
+            </div>
+          </div>
+          <div class="row">
+            <div class="medium-12 columns">
+              {{ form.form_text({
+                label: _('Email'),
+                name: 'mail',
+                value: udoc.mail,
+                type: 'email',
+                required: true
+              }) }}
+            </div>
+          </div>
+          <div class="row">
+            <div class="medium-6 columns">
+              {{ form.form_text({
+                label: _('School'),
+                name: 'school',
+                value: udoc.school or ''
+              }) }}
+            </div>
+            <div class="medium-6 columns">
+              {{ form.form_text({
+                label: _('Registration Time'),
+                name: 'regat',
+                value: moment(udoc.regat).format('YYYY-MM-DD HH:mm:ss') if udoc.regat else '',
+                readonly: true
+              }) }}
+            </div>
+          </div>
+          <div class="row">
+            <div class="medium-12 columns">
+              {{ form.form_textarea({
+                label: _('Bio'),
+                name: 'bio',
+                value: udoc.bio or '',
+                rows: 3
+              }) }}
+            </div>
+          </div>
+          <div class="row">
+            <div class="medium-12 columns">
+              <button type="submit" class="rounded primary button">
+                <span class="icon icon-save"></span> {{ _('Save Changes') }}
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+      
+      <div class="medium-4 columns">
+        <h3>{{ _('User Statistics') }}</h3>
+        <dl class="large horizontal">
+          <dt>{{ _('User ID') }}</dt>
+          <dd>#{{ udoc._id }}</dd>
+          
+          <dt>{{ _('Registration Time') }}</dt>
+          <dd>
+            {% if udoc.regat %}
+              {{ moment(udoc.regat).format('YYYY-MM-DD HH:mm') }}
+            {% else %}
+              -
+            {% endif %}
+          </dd>
+          
+          <dt>{{ _('Last Login') }}</dt>
+          <dd>
+            {% if udoc.loginat %}
+              {{ moment(udoc.loginat).format('YYYY-MM-DD HH:mm') }}
+            {% else %}
+              -
+            {% endif %}
+          </dd>
+          
+          <dt>{{ _('Current Privilege') }}</dt>
+          <dd>
+            {% if udoc.priv == -1 %}
+              <span class="badge badge--red">root</span>
+            {% elif udoc.priv == 0 %}
+              <span class="badge badge--gray">{{ _('Banned') }}</span>
+            {% elif udoc.priv == 8 %}
+              <span class="badge badge--yellow">Guest</span>
+            {% elif udoc.priv == 4 %}
+              <span class="badge badge--purple">System</span>
+            {% elif udoc.priv == 16842756 %}
+              <span class="badge badge--green">Default</span>
+            {% else %}
+              <span class="badge badge--blue">Other</span>
+            {% endif %}
+            <br><small>({{ udoc.priv }})</small>
+          </dd>
+          
+          {% if dudoc %}
+          <dt>{{ _('Domain Info') }}</dt>
+          <dd>
+            {% if dudoc.displayName %}
+              {{ _('Display Name') }}: {{ dudoc.displayName }}<br>
+            {% endif %}
+            {% if dudoc.nSubmit %}
+              {{ _('Submissions') }}: {{ dudoc.nSubmit }}<br>
+            {% endif %}
+            {% if dudoc.nAccept %}
+              {{ _('Accepted') }}: {{ dudoc.nAccept }}<br>
+            {% endif %}
+          </dd>
+          {% endif %}
+        </dl>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 权限管理 -->
+<div class="section">
+  <div class="section__header">
+    <h1 class="section__title">{{ _('Privilege Management') }}</h1>
+  </div>
+  <div class="section__body">
+    <form method="post" class="row">
+      <input type="hidden" name="operation" value="setPriv">
+      <div class="medium-6 columns">
+        {{ form.form_text({
+          label: _('Privilege Value'),
+          name: 'priv',
+          value: udoc.priv,
+          type: 'number'
+        }) }}
+        <p class="help-text">
+          {{ _('Common values') }}:<br>
+          -1: root<br>
+          0: {{ _('Banned') }}<br>
+          4: System<br>
+          8: Guest<br>
+          16842756: Default<br>
+          {{ _('Other values will be marked as "Other"') }}
+        </p>
+      </div>
+      <div class="medium-6 columns">
+        <label>&nbsp;</label>
+        <button type="submit" class="rounded button">
+          <span class="icon icon-key"></span> {{ _('Update Privilege') }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- 密码重置 -->
+<div class="section">
+  <div class="section__header">
+    <h1 class="section__title">{{ _('Password Management') }}</h1>
+  </div>
+  <div class="section__body">
+    <form method="post" class="row">
+      <input type="hidden" name="operation" value="resetPassword">
+      <div class="medium-6 columns">
+        {{ form.form_text({
+          label: _('New Password'),
+          name: 'password',
+          type: 'password',
+          required: true
+        }) }}
+      </div>
+      <div class="medium-6 columns">
+        <label>&nbsp;</label>
+        <button type="submit" class="rounded button warning" onclick="return confirm('{{ _('Are you sure to reset password?') }}')">
+          <span class="icon icon-refresh"></span> {{ _('Reset Password') }}
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- 用户状态管理 -->
+<div class="section">
+  <div class="section__header">
+    <h1 class="section__title">{{ _('User Status') }}</h1>
+  </div>
+  <div class="section__body">
+    <div class="row">
+      {% if udoc.priv == 0 %}
+      <div class="medium-6 columns">
+        <form method="post" style="display: inline;">
+          <input type="hidden" name="operation" value="unban">
+          <button type="submit" class="rounded button success" onclick="return confirm('{{ _('Are you sure to unban this user?') }}')">
+            <span class="icon icon-check"></span> {{ _('Unban User') }}
+          </button>
+        </form>
+      </div>
+      {% else %}
+      {% if udoc.priv != -1 %}
+      <div class="medium-6 columns">
+        <form method="post" style="display: inline;">
+          <input type="hidden" name="operation" value="ban">
+          <button type="submit" class="rounded button alert" onclick="return confirm('{{ _('Are you sure to ban this user?') }}')">
+            <span class="icon icon-close"></span> {{ _('Ban User') }}
+          </button>
+        </form>
+      </div>
+      {% endif %}
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<style>
+.badge {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: bold;
+  line-height: 1;
+  color: #fff;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: baseline;
+  border-radius: 3px;
+}
+
+.badge--red { background-color: #d9534f; }
+.badge--blue { background-color: #5bc0de; }
+.badge--green { background-color: #5cb85c; }
+.badge--gray { background-color: #777; }
+.badge--yellow { background-color: #f0ad4e; }
+.badge--purple { background-color: #9b59b6; }
+
+.help-text {
+  font-size: 12px;
+  color: #666;
+  margin-top: 5px;
+}
+
+.warning {
+  background-color: #f0ad4e;
+  border-color: #eea236;
+}
+
+.success {
+  background-color: #5cb85c;
+  border-color: #4cae4c;
+}
+
+.alert {
+  background-color: #d9534f;
+  border-color: #d43f3a;
+}
+</style>
+{% endblock %}

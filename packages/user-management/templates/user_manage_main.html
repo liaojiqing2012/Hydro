@@ -1,0 +1,184 @@
+{% import "components/user.html" as user with context %}
+{% import "components/sidemenu.html" as sidemenu with context %}
+{% extends "manage_base.html" %}
+
+{% block manage_content %}
+<div class="section">
+  <div class="section__header">
+    <h1 class="section__title">{{ _('User Management') }}</h1>
+  </div>
+  
+  <!-- 搜索和筛选 -->
+  <div class="section__body">
+    <form method="get" class="row">
+      <div class="medium-6 columns">
+        <label>{{ _('Search Users') }}</label>
+        <input type="text" name="search" value="{{ search }}" placeholder="{{ _('Username, Email or User ID') }}">
+      </div>
+      <div class="medium-4 columns">
+        <label>{{ _('Sort by') }}</label>
+        <select name="sort">
+          <option value="_id" {% if sort == '_id' %}selected{% endif %}>{{ _('User ID') }}</option>
+          <option value="uname" {% if sort == 'uname' %}selected{% endif %}>{{ _('Username') }}</option>
+          <option value="regat" {% if sort == 'regat' %}selected{% endif %}>{{ _('Registration Time') }}</option>
+          <option value="loginat" {% if sort == 'loginat' %}selected{% endif %}>{{ _('Last Login') }}</option>
+          <option value="priv" {% if sort == 'priv' %}selected{% endif %}>{{ _('Privilege') }}</option>
+        </select>
+      </div>
+      <div class="medium-2 columns">
+        <label>&nbsp;</label>
+        <button type="submit" class="expanded rounded button">{{ _('Search') }}</button>
+      </div>
+    </form>
+  </div>
+  
+  <!-- 用户列表 -->
+  <div class="section__body no-padding">
+    <table class="data-table">
+      <colgroup>
+        <col class="col--uid">
+        <col class="col--user">
+        <col class="col--email">
+        <col class="col--regat">
+        <col class="col--loginat">
+        <col class="col--priv">
+        <col class="col--status">
+        <col class="col--actions">
+      </colgroup>
+      <thead>
+        <tr>
+          <th class="col--uid">{{ _('User ID') }}</th>
+          <th class="col--user">{{ _('Username') }}</th>
+          <th class="col--email">{{ _('Email') }}</th>
+          <th class="col--regat">{{ _('Registration Time') }}</th>
+          <th class="col--loginat">{{ _('Last Login') }}</th>
+          <th class="col--priv">{{ _('Privilege') }}</th>
+          <th class="col--status">{{ _('Status') }}</th>
+          <th class="col--actions">{{ _('Actions') }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for udoc in udocs %}
+        {% set dudoc = dudocMap[udoc._id] %}
+        <tr data-uid="{{ udoc._id }}">
+          <td class="col--uid">
+            {{ udoc._id }}
+          </td>
+          <td class="col--user">
+            {{ user.render_inline(udoc, badge=false) }}
+            {% if dudoc and dudoc.displayName %}
+              <br><small class="text-gray">{{ dudoc.displayName }}</small>
+            {% endif %}
+          </td>
+          <td class="col--email">
+            {{ udoc.mail }}
+          </td>
+          <td class="col--regat">
+            {% if udoc.regat %}
+              {{ moment(udoc.regat).format('YYYY-MM-DD HH:mm') }}
+            {% else %}
+              -
+            {% endif %}
+          </td>
+          <td class="col--loginat">
+            {% if udoc.loginat %}
+              {{ moment(udoc.loginat).format('YYYY-MM-DD HH:mm') }}
+            {% else %}
+              -
+            {% endif %}
+          </td>
+          <td class="col--priv">
+            {% if udoc.priv == -1 %}
+              <span class="badge badge--red">root</span>
+            {% elif udoc.priv == 0 %}
+              <span class="badge badge--gray">{{ _('Banned') }}</span>
+            {% elif udoc.priv == 8 %}
+              <span class="badge badge--yellow">Guest</span>
+            {% elif udoc.priv == 4 %}
+              <span class="badge badge--purple">System</span>
+            {% elif udoc.priv == 16842756 %}
+              <span class="badge badge--green">Default</span>
+            {% else %}
+              <span class="badge badge--blue">Other</span>
+            {% endif %}
+            <br><small class="text-gray">{{ udoc.priv }}</small>
+          </td>
+          <td class="col--status">
+            {% if udoc.priv == 0 %}
+              <span class="text-red">{{ _('Banned') }}</span>
+            {% else %}
+              <span class="text-green">{{ _('Active') }}</span>
+            {% endif %}
+          </td>
+          <td class="col--actions">
+            <a href="{{ url('user_management_detail', uid=udoc._id) }}" class="button button--small">
+              {{ _('Edit') }}
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  
+  <!-- 分页 -->
+  {% if upcount > 50 %}
+  <div class="section__body">
+    <div class="row">
+      <div class="columns">
+        {% include "components/paginator.html" %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<style>
+.col--uid { width: 80px; }
+.col--user { width: 150px; }
+.col--email { width: 200px; }
+.col--regat { width: 120px; }
+.col--loginat { width: 120px; }
+.col--priv { width: 100px; }
+.col--status { width: 80px; }
+.col--actions { width: 100px; }
+
+.badge {
+  display: inline-block;
+  padding: 2px 6px;
+  font-size: 11px;
+  font-weight: bold;
+  line-height: 1;
+  color: #fff;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: baseline;
+  border-radius: 3px;
+}
+
+.badge--red { background-color: #d9534f; }
+.badge--blue { background-color: #5bc0de; }
+.badge--green { background-color: #5cb85c; }
+.badge--gray { background-color: #777; }
+.badge--yellow { background-color: #f0ad4e; }
+.badge--purple { background-color: #9b59b6; }
+
+.text-red { color: #d9534f; }
+.text-green { color: #5cb85c; }
+.text-gray { color: #777; }
+
+.button--small {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+</style>
+
+<script>
+$(document).ready(function() {
+  // 排序功能：当选择框改变时自动提交表单
+  $('select[name="sort"]').on('change', function() {
+    $(this).closest('form').submit();
+  });
+});
+</script>
+{% endblock %}

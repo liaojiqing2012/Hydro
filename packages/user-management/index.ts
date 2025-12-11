@@ -60,7 +60,7 @@ class UserManageMainHandler extends UserManageHandler {
         const dudocs = await DomainModel.getMultiUserInDomain(domainId, { uid: { $in: duids } }).toArray();
         const dudocMap = Object.fromEntries(dudocs.map(dudoc => [dudoc.uid, dudoc]));
         
-        this.response.template = 'user_management.html';
+        this.response.template = 'user_manage_main.html';
         this.response.body = {
             udocs,
             dudocMap,
@@ -83,7 +83,7 @@ class UserManageDetailHandler extends UserManageHandler {
         
         const dudoc = await DomainModel.getDomainUser(domainId, udoc);
         
-        this.response.template = 'user_management.html';
+        this.response.template = 'user_manage_detail.html';
         this.response.body = {
             udoc,
             dudoc,
@@ -214,7 +214,7 @@ export async function apply(ctx: Context) {
     ctx.Route('user_management_detail', '/manage/users/:uid', UserManageDetailHandler, PRIV.PRIV_EDIT_SYSTEM);
     
     // 在控制面板侧边栏添加用户管理菜单项
-    ctx.injectUI('ControlPanel', 'user_management', { icon: 'user' });
+    ctx.injectUI('ControlPanel', 'user_management', {}, PRIV.PRIV_EDIT_SYSTEM);
     
     // 添加国际化支持
     ctx.i18n.load('zh', {
