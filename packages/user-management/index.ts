@@ -333,8 +333,8 @@ class UserDomainsApiHandler extends Handler {
 }
 
 export default class UserManagementService extends Service {
-    // 移除renderer依赖，只保留server依赖
-    static inject = ['server'];
+    // 添加ui服务依赖，修复cannot get property "ui" without inject错误
+    static inject = ['server', 'ui'];
     static Config = Schema.object({
         enabled: Schema.boolean().default(true),
         adminOnly: Schema.boolean().default(true),
@@ -357,15 +357,15 @@ export default class UserManagementService extends Service {
     }
 
     private registerRoutes(ctx: Context) {
-        // 使用ctx.Route注册页面路由
-        ctx.Route('user_management', '/manage/users', UserListHandler, PRIV.PRIV_EDIT_SYSTEM);
-        ctx.Route('user_detail', '/manage/users/:uid', UserDetailHandler, PRIV.PRIV_EDIT_SYSTEM);
-        ctx.Route('user_domains', '/manage/users/:uid/domains', UserDomainsHandler, PRIV.PRIV_EDIT_SYSTEM);
+        // 使用唯一的路由名称，避免与系统路由冲突
+        ctx.Route('user_management_list', '/manage/users', UserListHandler, PRIV.PRIV_EDIT_SYSTEM);
+        ctx.Route('user_management_detail', '/manage/users/:uid', UserDetailHandler, PRIV.PRIV_EDIT_SYSTEM);
+        ctx.Route('user_management_domains', '/manage/users/:uid/domains', UserDomainsHandler, PRIV.PRIV_EDIT_SYSTEM);
         
-        // 使用ctx.Route注册API路由
-        ctx.Route('user_api', '/api/manage/users', UserApiHandler, PRIV.PRIV_EDIT_SYSTEM);
-        ctx.Route('user_api_detail', '/api/manage/users/:uid', UserApiHandler, PRIV.PRIV_EDIT_SYSTEM);
-        ctx.Route('user_domains_api', '/api/manage/users/:uid/domains', UserDomainsApiHandler, PRIV.PRIV_EDIT_SYSTEM);
+        // 使用唯一的API路由名称
+        ctx.Route('user_management_api_list', '/api/manage/users', UserApiHandler, PRIV.PRIV_EDIT_SYSTEM);
+        ctx.Route('user_management_api_detail', '/api/manage/users/:uid', UserApiHandler, PRIV.PRIV_EDIT_SYSTEM);
+        ctx.Route('user_management_api_domains', '/api/manage/users/:uid/domains', UserDomainsApiHandler, PRIV.PRIV_EDIT_SYSTEM);
     }
 
     private registerPages(ctx: Context) {
