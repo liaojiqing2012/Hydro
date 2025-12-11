@@ -159,7 +159,7 @@ class UserDomainsHandler extends Handler {
 }
 
 export default class UserManagementService extends Service {
-    static inject = ['server', 'renderer'];
+    static inject = ['server', 'ui'];
     static Config = Schema.object({
         enabled: Schema.boolean().default(true),
         adminOnly: Schema.boolean().default(true),
