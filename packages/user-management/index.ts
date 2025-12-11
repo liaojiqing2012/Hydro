@@ -202,10 +202,10 @@ class UserManageDetailHandler extends UserManageHandler {
 }
 
 // 插件配置
-export const Config = {
-    enabled: true,
-    adminOnly: true,
-};
+export const Config = Schema.object({
+    enabled: Schema.boolean().default(true),
+    adminOnly: Schema.boolean().default(true),
+});
 
 // 插件主函数 - 按照官方文档要求，使用apply函数
 export async function apply(ctx: Context) {
