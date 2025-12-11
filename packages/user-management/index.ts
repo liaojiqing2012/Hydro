@@ -1,112 +1,347 @@
-import { Context, Handler, Schema, UserModel, PRIV, Types } from 'hydrooj';
+import {
+    Context, Handler, param, Types, UserModel, DomainModel,
+    ValidationError, UserNotFoundError, PermissionError,
+    PRIV, SystemModel
+} from 'hydrooj';
 
-// 用户列表Handler
-class UserManagementHandler extends Handler {
-    async get() {
-        // 权限检查
-        this.checkPriv(PRIV.PRIV_EDIT_SYSTEM);
-        
-        // 获取domainId
-        const domainId = this.request.query.domainId || 'system';
-        
-        // 查询用户列表
-        // 1. 获取所有用户ID
-        const cursor = UserModel.getMulti({});
-        const udocs = await cursor.toArray();
-        const uids = udocs.map(udoc => udoc._id).slice(0, 20);
-        
-        // 2. 获取用户详细信息
-        const userDict = await UserModel.getList(domainId, uids);
-        const users = Object.values(userDict);
-        
-        // 3. 获取总数
-        const total = udocs.length;
-        
-        // 设置模板和数据，让框架自动渲染
-        this.response.template = 'user_management.html';
-        this.response.body = {
-            title: '用户管理',
-            users,
-            total,
-            page: 1,
-            limit: 20,
-            totalPages: Math.ceil(total / 20),
-            keyword: this.request.query.q || '',
-            sort: this.request.query.sort || 'uid',
-            order: this.request.query.order || 'asc'
-        };
+declare module 'hydrooj' {
+    interface Collections {
+        // 扩展用户集合类型
     }
 }
 
-// API用户列表Handler
-class UserManagementApiHandler extends Handler {
-    async get() {
-        // 权限检查
+// 用户管理处理器基类
+class UserManageHandler extends Handler {
+    async prepare() {
+        // 检查是否有系统管理权限
         this.checkPriv(PRIV.PRIV_EDIT_SYSTEM);
+    }
+}
+
+// 用户管理主页面处理器
+class UserManageMainHandler extends UserManageHandler {
+    @param('page', Types.PositiveInt, true)
+    @param('search', Types.String, true)
+    @param('sort', Types.String, true)
+    async get(domainId: string, page = 1, search = '', sort = '_id') {
+        const limit = 50;
+        const query: any = {};
         
-        // 查询参数
-        const page = parseInt(this.request.query.page || '1');
-        const limit = parseInt(this.request.query.limit || '20');
-        const skip = (page - 1) * limit;
-        const domainId = this.request.query.domainId || 'system';
+        // 搜索功能
+        if (search) {
+            const searchRegex = new RegExp(search, 'i');
+            query.$or = [
+                { uname: searchRegex },
+                { mail: searchRegex },
+                { _id: isNaN(+search) ? undefined : +search }
+            ].filter(Boolean);
+        }
         
-        // 查询用户列表
-        // 1. 获取所有用户ID
-        const cursor = UserModel.getMulti({});
-        const udocs = await cursor.toArray();
-        const uids = udocs.map(udoc => udoc._id).slice(skip, skip + limit);
+        // 排序选项
+        const sortOptions: Record<string, any> = {
+            '_id': { _id: 1 },
+            'uname': { uname: 1 },
+            'regat': { regat: -1 },
+            'loginat': { loginat: -1 },
+            'priv': { priv: -1 }
+        };
         
-        // 2. 获取用户详细信息
-        const userDict = await UserModel.getList(domainId, uids);
-        const users = Object.values(userDict);
+        const sortQuery = sortOptions[sort] || { _id: 1 };
         
-        // 3. 获取总数
-        const total = udocs.length;
-        
-        // 返回响应
-        this.response.body = {
-            users,
-            total,
+        // 获取用户列表
+        const [udocs, upcount] = await this.paginate(
+            UserModel.getMulti(query).sort(sortQuery),
             page,
+            limit
+        );
+        
+        // 获取用户在当前域的信息
+        const duids = udocs.map(udoc => udoc._id);
+        const dudocs = await DomainModel.getMultiUserInDomain(domainId, { uid: { $in: duids } }).toArray();
+        const dudocMap = Object.fromEntries(dudocs.map(dudoc => [dudoc.uid, dudoc]));
+        
+        this.response.template = 'user_management.html';
+        this.response.body = {
+            udocs,
+            dudocMap,
+            page,
+            upcount,
+            search,
+            sort,
+            canEdit: true,
             limit
         };
     }
 }
 
-// 用户详情Handler
-class UserDetailHandler extends Handler {
-    async get() {
-        // 权限检查
-        this.checkPriv(PRIV.PRIV_EDIT_SYSTEM);
+// 用户详情和编辑处理器
+class UserManageDetailHandler extends UserManageHandler {
+    @param('uid', Types.Int)
+    async get(domainId: string, uid: number) {
+        const udoc = await UserModel.getById(domainId, uid);
+        if (!udoc) throw new UserNotFoundError(uid);
         
-        // 获取用户ID和domainId
-        const uid = parseInt(this.request.params.uid);
-        const domainId = this.request.query.domainId || 'system';
+        const dudoc = await DomainModel.getDomainUser(domainId, udoc);
         
-        // 查询用户详情
-        const user = await UserModel.getById(domainId, uid);
-        if (!user) {
-            this.response.status = 404;
-            this.response.body = { error: 'User not found' };
-            return;
+        this.response.template = 'user_management.html';
+        this.response.body = {
+            udoc,
+            dudoc,
+            canEdit: true,
+            viewOnly: true
+        };
+    }
+    
+    @param('uid', Types.Int)
+    @param('operation', Types.String)
+    async post(domainId: string, uid: number, operation: string) {
+        const udoc = await UserModel.getById(domainId, uid);
+        if (!udoc) throw new UserNotFoundError(uid);
+        
+        if (operation === 'edit') {
+            await this.postEdit(domainId, uid);
+        } else if (operation === 'resetPassword') {
+            await this.postResetPassword(domainId, uid);
+        } else if (operation === 'setPriv') {
+            await this.postSetPriv(domainId, uid);
+        } else if (operation === 'ban') {
+            await this.postBan(domainId, uid);
+        } else if (operation === 'unban') {
+            await this.postUnban(domainId, uid);
         }
         
-        // 返回响应
-        this.response.body = { user };
+        this.back();
+    }
+    
+    @param('uid', Types.Int)
+    @param('mail', Types.String, true)
+    @param('uname', Types.String, true)
+    @param('school', Types.String, true)
+    @param('bio', Types.String, true)
+    async postEdit(domainId: string, uid: number, mail?: string, uname?: string, school?: string, bio?: string) {
+        const udoc = await UserModel.getById(domainId, uid);
+        if (!udoc) throw new UserNotFoundError(uid);
+        
+        if (mail && mail !== udoc.mail) {
+            // 检查邮箱是否已被使用
+            const existing = await UserModel.getByEmail(domainId, mail);
+            if (existing && existing._id !== uid) {
+                throw new ValidationError('mail', '邮箱已被使用');
+            }
+            await UserModel.setEmail(uid, mail);
+        }
+        
+        if (uname && uname !== udoc.uname) {
+            // 检查用户名是否已被使用
+            const existing = await UserModel.getByUname(domainId, uname);
+            if (existing && existing._id !== uid) {
+                throw new ValidationError('uname', '用户名已被使用');
+            }
+            await UserModel.setUname(uid, uname);
+        }
+        
+        const updates: any = {};
+        if (school !== undefined) updates.school = school;
+        if (bio !== undefined) updates.bio = bio;
+        
+        if (Object.keys(updates).length > 0) {
+            await UserModel.setById(uid, updates);
+        }
+    }
+    
+    @param('uid', Types.Int)
+    @param('password', Types.String)
+    async postResetPassword(domainId: string, uid: number, password: string) {
+        const udoc = await UserModel.getById(domainId, uid);
+        if (!udoc) throw new UserNotFoundError(uid);
+        
+        // 不允许重置超级管理员密码（除非当前用户也是超级管理员）
+        if (udoc.priv === PRIV.PRIV_ALL && this.user.priv !== PRIV.PRIV_ALL) {
+            throw new PermissionError('不能重置超级管理员密码');
+        }
+        
+        await UserModel.setPassword(uid, password);
+    }
+    
+    @param('uid', Types.Int)
+    @param('priv', Types.Int)
+    async postSetPriv(domainId: string, uid: number, priv: number) {
+        const udoc = await UserModel.getById(domainId, uid);
+        if (!udoc) throw new UserNotFoundError(uid);
+        
+        // 不允许修改超级管理员权限（除非当前用户也是超级管理员）
+        if ((udoc.priv === PRIV.PRIV_ALL || priv === PRIV.PRIV_ALL) && this.user.priv !== PRIV.PRIV_ALL) {
+            throw new PermissionError('不能修改超级管理员权限');
+        }
+        
+        await UserModel.setPriv(uid, priv);
+    }
+    
+    @param('uid', Types.Int)
+    async postBan(domainId: string, uid: number) {
+        const udoc = await UserModel.getById(domainId, uid);
+        if (!udoc) throw new UserNotFoundError(uid);
+        
+        // 不允许封禁超级管理员
+        if (udoc.priv === PRIV.PRIV_ALL) {
+            throw new PermissionError('不能封禁超级管理员');
+        }
+        
+        await UserModel.ban(uid, '管理员封禁');
+    }
+    
+    @param('uid', Types.Int)
+    async postUnban(domainId: string, uid: number) {
+        const udoc = await UserModel.getById(domainId, uid);
+        if (!udoc) throw new UserNotFoundError(uid);
+        
+        // 恢复为默认权限
+        const defaultPriv = await SystemModel.get('default.priv');
+        await UserModel.setPriv(uid, defaultPriv);
     }
 }
 
 // 插件配置
-export const Config = Schema.object({
-    enabled: Schema.boolean().default(true),
-    adminOnly: Schema.boolean().default(true),
-});
+export const Config = {
+    enabled: true,
+    adminOnly: true,
+};
 
 // 插件主函数 - 按照官方文档要求，使用apply函数
 export async function apply(ctx: Context) {
-    // 注册路由 - 使用ctx.Route，而不是ctx.server.get
-    ctx.Route('user_management', '/manage/users', UserManagementHandler, PRIV.PRIV_EDIT_SYSTEM);
-    ctx.Route('user_management_api', '/api/manage/users', UserManagementApiHandler, PRIV.PRIV_EDIT_SYSTEM);
-    ctx.Route('user_management_detail', '/manage/users/:uid', UserDetailHandler, PRIV.PRIV_EDIT_SYSTEM);
-    ctx.Route('user_management_api_detail', '/api/manage/users/:uid', UserDetailHandler, PRIV.PRIV_EDIT_SYSTEM);
+    // 注册路由
+    ctx.Route('user_management', '/manage/users', UserManageMainHandler, PRIV.PRIV_EDIT_SYSTEM);
+    ctx.Route('user_management_detail', '/manage/users/:uid', UserManageDetailHandler, PRIV.PRIV_EDIT_SYSTEM);
+    
+    // 在控制面板侧边栏添加用户管理菜单项
+    ctx.injectUI('ControlPanel', 'user_management', { icon: 'user' });
+    
+    // 添加国际化支持
+    ctx.i18n.load('zh', {
+        'user_management': '用户管理',
+        'user_management_detail': '用户详情',
+        
+        'User Management': '用户管理',
+        'User List': '用户列表',
+        'Search Users': '搜索用户',
+        'Search by': '搜索方式',
+        'Username': '用户名',
+        'Email': '邮箱',
+        'User ID': '用户ID',
+        'Keyword': '关键词',
+        'Sort by': '排序方式',
+        'Registration Time': '注册时间',
+        'Last Login': '最后登录',
+        'Privilege': '权限',
+        'Order': '顺序',
+        'Ascending': '升序',
+        'Descending': '降序',
+        'Search': '搜索',
+        'Clear': '清空',
+        'Refresh': '刷新',
+        
+        'Normal User': '普通用户',
+        'Admin': '管理员',
+        'Banned': '已封禁',
+        'Super Admin': '超级管理员',
+        'Active': '活跃',
+        'Inactive': '不活跃',
+        'Actions': '操作',
+        'View': '查看',
+        'Edit': '编辑',
+        'Ban': '封禁',
+        'Unban': '解封',
+        'Set Privilege': '设置权限',
+        'Status': '状态',
+        'School': '学校',
+        'Bio': '个人简介',
+        'Never': '从未',
+        'Not set': '未设置',
+        'Previous': '上一页',
+        'Next': '下一页',
+        'Page': '页',
+        'of': '共',
+        'users': '用户',
+        'Total': '总计',
+        'Showing': '显示',
+        'to': '到',
+        'User Details': '用户详情',
+        'Basic Information': '基本信息',
+        'User Statistics': '用户统计',
+        'Privilege Management': '权限管理',
+        'Password Management': '密码管理',
+        'User Status': '用户状态',
+        'Back to List': '返回列表',
+        'Save Changes': '保存更改',
+        'Cancel': '取消',
+        'Reset Password': '重置密码',
+        'Current Privilege': '当前权限',
+        'Ban User': '封禁用户',
+        'Unban User': '解封用户',
+        'Copy User ID': '复制用户ID'
+    });
+    
+    ctx.i18n.load('en', {
+        'user_management': 'User Management',
+        'user_management_detail': 'User Detail',
+        
+        'User Management': 'User Management',
+        'User List': 'User List',
+        'Search Users': 'Search Users',
+        'Search by': 'Search by',
+        'Username': 'Username',
+        'Email': 'Email',
+        'User ID': 'User ID',
+        'Keyword': 'Keyword',
+        'Sort by': 'Sort by',
+        'Registration Time': 'Registration Time',
+        'Last Login': 'Last Login',
+        'Privilege': 'Privilege',
+        'Order': 'Order',
+        'Ascending': 'Ascending',
+        'Descending': 'Descending',
+        'Search': 'Search',
+        'Clear': 'Clear',
+        'Refresh': 'Refresh',
+        
+        'Normal User': 'Normal User',
+        'Admin': 'Admin',
+        'Banned': 'Banned',
+        'Super Admin': 'Super Admin',
+        'Active': 'Active',
+        'Inactive': 'Inactive',
+        'Actions': 'Actions',
+        'View': 'View',
+        'Edit': 'Edit',
+        'Ban': 'Ban',
+        'Unban': 'Unban',
+        'Set Privilege': 'Set Privilege',
+        'Status': 'Status',
+        'School': 'School',
+        'Bio': 'Bio',
+        'Never': 'Never',
+        'Not set': 'Not set',
+        'Previous': 'Previous',
+        'Next': 'Next',
+        'Page': 'Page',
+        'of': 'of',
+        'users': 'users',
+        'Total': 'Total',
+        'Showing': 'Showing',
+        'to': 'to',
+        'User Details': 'User Details',
+        'Basic Information': 'Basic Information',
+        'User Statistics': 'User Statistics',
+        'Privilege Management': 'Privilege Management',
+        'Password Management': 'Password Management',
+        'User Status': 'User Status',
+        'Back to List': 'Back to List',
+        'Save Changes': 'Save Changes',
+        'Cancel': 'Cancel',
+        'Reset Password': 'Reset Password',
+        'Current Privilege': 'Current Privilege',
+        'Ban User': 'Ban User',
+        'Unban User': 'Unban User',
+        'Copy User ID': 'Copy User ID'
+    });
 }

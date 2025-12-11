@@ -355,29 +355,16 @@ select:focus {
       <form class="inline" method="get" action="">
         <label class="input-group">
           <span class="input-addon">关键词</span>
-          <input type="text" name="q" value="{{ keyword }}" placeholder="关键词">
+          <input type="text" name="search" value="{{ search }}" placeholder="关键词">
         </label>
         <label class="input-group">
           <span class="input-addon">排序方式</span>
           <select name="sort">
-              <option value="uid"{% if sort == 'uid' %} selected{% endif %}>用户ID</option>
+              <option value="_id"{% if sort == '_id' %} selected{% endif %}>用户ID</option>
               <option value="uname"{% if sort == 'uname' %} selected{% endif %}>用户名</option>
-              <option value="displayName"{% if sort == 'displayName' %} selected{% endif %}>显示名称</option>
-              <option value="studentId"{% if sort == 'studentId' %} selected{% endif %}>学号</option>
-              <option value="school"{% if sort == 'school' %} selected{% endif %}>学校</option>
-              <option value="email"{% if sort == 'email' %} selected{% endif %}>邮箱</option>
               <option value="regat"{% if sort == 'regat' %} selected{% endif %}>注册时间</option>
               <option value="loginat"{% if sort == 'loginat' %} selected{% endif %}>最后登录</option>
-              <option value="role"{% if sort == 'role' %} selected{% endif %}>角色</option>
               <option value="priv"{% if sort == 'priv' %} selected{% endif %}>权限</option>
-              <option value="loginip"{% if sort == 'loginip' %} selected{% endif %}>最后登录IP</option>
-          </select>
-        </label>
-        <label class="input-group">
-          <span class="input-addon">排序顺序</span>
-          <select name="order">
-              <option value="asc"{% if order == 'asc' %} selected{% endif %}>升序</option>
-              <option value="desc"{% if order == 'desc' %} selected{% endif %}>降序</option>
           </select>
         </label>
         <button class="primary rounded button" type="submit">
@@ -426,45 +413,46 @@ select:focus {
         </tr>
       </thead>
       <tbody>
-        {% if users.length == 0 %}
+        {% if udocs.length == 0 %}
         <tr>
           <td class="col--empty" colspan="13">暂无用户</td>
         </tr>
         {% else %}
-          {% for u in users %}
+          {% for udoc in udocs %}
+          {% set dudoc = dudocMap[udoc._id] %}
           <tr>
             <td class="col--check">
               <label class="checkbox-inline">
-                <input type="checkbox" name="uids" value="{{ u._id }}">
+                <input type="checkbox" name="uids" value="{{ udoc._id }}">
                 <span class="checkbox"></span>
               </label>
             </td>
-            <td class="col--uid">{{ u._id }}</td>
-            <td class="col--user"><a href="{{ url('user_detail', { uid: u._id }) }}">{{ u.uname }}</a></td>
-            <td class="col--user">{{ u.displayName or '-' }}</td>
-            <td class="col--student">{{ u.studentId or '-' }}</td>
-            <td class="col--school">{{ u.school or '-' }}</td>
-            <td class="col--mail">{{ u.mail }}</td>
-            <td class="col--role">{{ u.role }}</td>
-            <td class="col--priv">{{ u.priv }}</td>
-            <td class="col--date">{{ datetimeSpan(u.regat) | safe }}</td>
-            <td class="col--date">{{ datetimeSpan(u.loginat) | safe }}</td>
-            <td class="col--ip">{{ u.loginip or '-' }}</td>
+            <td class="col--uid">{{ udoc._id }}</td>
+            <td class="col--user"><a href="{{ url('user_detail', { uid: udoc._id }) }}">{{ udoc.uname }}</a></td>
+            <td class="col--user">{{ udoc.displayName or '-' }}</td>
+            <td class="col--student">{{ udoc.studentId or '-' }}</td>
+            <td class="col--school">{{ udoc.school or '-' }}</td>
+            <td class="col--mail">{{ udoc.mail }}</td>
+            <td class="col--role">{{ dudoc?.role or '-' }}</td>
+            <td class="col--priv">{{ udoc.priv }}</td>
+            <td class="col--date">{{ datetimeSpan(udoc.regat) | safe }}</td>
+            <td class="col--date">{{ datetimeSpan(udoc.loginat) | safe }}</td>
+            <td class="col--ip">{{ udoc.loginip or '-' }}</td>
             <td class="col--action">
               <div class="dropdown">
                 <button class="small button dropdown-toggle" type="button">
                   操作
                 </button>
                 <ul class="dropdown-menu">
-                  <li><a href="{{ url('user_detail', { uid: u._id }) }}"><span class="icon icon-eye"></span> 查看</a></li>
-                  <li><a href="#" class="edit-user" data-uid="{{ u._id }}"><span class="icon icon-pencil"></span> 编辑</a></li>
-                  <li><a href="#" class="reset-password" data-uid="{{ u._id }}"><span class="icon icon-key"></span> 重置密码</a></li>
-                  <li><a href="{{ url('user_domains', { uid: u._id }) }}"><span class="icon icon-domain"></span> 域权限</a></li>
-                  <li><a href="#" class="toggle-user-status" data-uid="{{ u._id }}" data-status="{% if u.disabled %}enable{% else %}disable{% endif %}">
-                    <span class="icon icon-{% if u.disabled %}check{% else %}x{% endif %}"></span> {% if u.disabled %}启用{% else %}禁用{% endif %}
+                  <li><a href="{{ url('user_management_detail', { uid: udoc._id }) }}"><span class="icon icon-eye"></span> 查看</a></li>
+                  <li><a href="#" class="edit-user" data-uid="{{ udoc._id }}"><span class="icon icon-pencil"></span> 编辑</a></li>
+                  <li><a href="#" class="reset-password" data-uid="{{ udoc._id }}"><span class="icon icon-key"></span> 重置密码</a></li>
+                  <li><a href="{{ url('user_domains', { uid: udoc._id }) }}"><span class="icon icon-domain"></span> 域权限</a></li>
+                  <li><a href="#" class="toggle-user-status" data-uid="{{ udoc._id }}" data-status="{% if udoc.priv == 0 %}enable{% else %}disable{% endif %}">
+                    <span class="icon icon-{% if udoc.priv == 0 %}check{% else %}x{% endif %}"></span> {% if udoc.priv == 0 %}启用{% else %}禁用{% endif %}
                   </a></li>
                   <li class="divider"></li>
-                  <li class="danger"><a href="#" class="delete-user" data-uid="{{ u._id }}"><span class="icon icon-trash"></span> 删除</a></li>
+                  <li class="danger"><a href="#" class="ban-user" data-uid="{{ udoc._id }}"><span class="icon icon-trash"></span> 封禁</a></li>
                 </ul>
               </div>
             </td>
@@ -472,18 +460,18 @@ select:focus {
           {% endfor %}
         {% endif %}
       </tbody>
-      {% if totalPages > 1 %}
+      {% if upcount > limit %}
       <tfoot>
         <tr>
           <td colspan="13" class="pagination">
             <div class="row align-middle">
-              <div class="columns small-6">{{ _('Page {0} / {1}', page, totalPages) }}</div>
+              <div class="columns small-6">第 {{ page }} 页 / 共 {{ Math.ceil(upcount / limit) }} 页</div>
               <div class="columns small-6 align-right">
                 {% if page > 1 %}
-                  <a class="button" href="{{ url('user_management', { page: page - 1, q: keyword, sort: sort, order: order }) }}">&laquo; {{ _('Prev') }}</a>
+                  <a class="button" href="{{ url('user_management', { page: page - 1, search: search, sort: sort }) }}">&laquo; 上一页</a>
                 {% endif %}
-                {% if page < totalPages %}
-                  <a class="button" href="{{ url('user_management', { page: page + 1, q: keyword, sort: sort, order: order }) }}">{{ _('Next') }} &raquo;</a>
+                {% if page * limit < upcount %}
+                  <a class="button" href="{{ url('user_management', { page: page + 1, search: search, sort: sort }) }}">下一页 &raquo;</a>
                 {% endif %}
               </div>
             </div>
