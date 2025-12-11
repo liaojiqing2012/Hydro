@@ -4,6 +4,7 @@ import './init';
 import './interface';
 import path from 'path';
 import child from 'child_process';
+import fs from 'fs-extra';
 // eslint-disable-next-line import/no-duplicates
 import './utils';
 import cac from 'cac';
@@ -29,6 +30,9 @@ process.on('unhandledRejection', logger.error);
 process.on('uncaughtException', logger.error);
 
 const HYDROPATH = [];
+const BUILTIN_ADDONS = [
+    path.resolve(__dirname, '../../user-management'),
+];
 
 if (process.env.NIX_PROFILES) {
     try {
@@ -164,7 +168,9 @@ async function preload() {
             resolve(c);
         });
     });
-    for (const a of [path.resolve(__dirname, '..'), ...getAddons()]) {
+    const addons = [path.resolve(__dirname, '..'), ...BUILTIN_ADDONS, ...getAddons()]
+        .filter((p) => fs.existsSync(p));
+    for (const a of addons) {
         try {
             // Is a npm package
             const packagejson = require.resolve(`${a}/package.json`);
