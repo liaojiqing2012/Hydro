@@ -1129,3 +1129,50 @@ Your browser does not support WebAuthn or you are not in secure context.: 您的
 Your Device: 你的设备
 Your permission: 您的权限
 Your role: 您的角色
+
+# User Management
+user_management: 用户管理
+user_management_description: 管理系统用户账户和权限
+user_management_keyword: 关键词
+user_management_sort_by: 排序方式
+user_management_uid: 用户ID
+user_management_uname: 用户名
+user_management_display_name: 显示名称
+user_management_student_id: 学号
+user_management_school: 学校
+user_management_email: 邮箱
+user_management_registered: 注册时间
+user_management_last_login: 最后登录
+user_management_role: 角色
+user_management_privilege: 权限
+user_management_last_login_ip: 最后登录IP
+user_management_sort_order: 排序顺序
+user_management_sort_asc: 升序
+user_management_sort_desc: 降序
+user_management_search: 搜索
+user_management_actions: 操作
+user_management_empty: 暂无用户
+user_management_view: 查看
+user_management_edit: 编辑
+user_management_reset_password: 重置密码
+user_management_domains: 域权限
+user_management_enable: 启用
+user_management_disable: 禁用
+user_management_delete: 删除
+user_management_edit_user: 编辑用户
+user_management_home_page: 主页
+user_management_permission: 权限
+user_management_permission_help: 请输入权限标识符，多个权限用逗号分隔
+user_management_new_password: 新密码
+user_management_new_password_placeholder: 请输入新密码
+user_management_confirm_password: 确认密码
+user_management_confirm_password_placeholder: 请再次输入新密码
+user_management_batch_delete: 批量删除
+user_management_batch_enable: 批量启用
+user_management_batch_disable: 批量禁用
+user_management_confirm_disable: 确定要禁用该用户吗？
+user_management_confirm_enable: 确定要启用该用户吗？
+user_management_confirm_delete: 确定要删除该用户吗？
+user_management_password_mismatch: 两次输入的密码不匹配
+user_management_select_users: 请选择要操作的用户
+user_management_confirm_batch_delete: 确定要批量删除选中的用户吗？
