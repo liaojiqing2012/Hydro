@@ -159,7 +159,7 @@ class UserDomainsHandler extends Handler {
 }
 
 export default class UserManagementService extends Service {
-    static inject = ['server', 'ui'];
+    static inject = ['server'];
     static Config = Schema.object({
         enabled: Schema.boolean().default(true),
         adminOnly: Schema.boolean().default(true),
@@ -193,7 +193,7 @@ export default class UserManagementService extends Service {
 
     private registerPages(ctx: Context) {
         // 注入到管理菜单
-        ctx.ui.inject('ControlPanel', 'user_management', {
+        ctx.injectUI('ControlPanel', 'user_management', {
             icon: 'account--multiple',
             order: 100
         }, PRIV.PRIV_EDIT_SYSTEM);
