@@ -193,9 +193,7 @@ export default class UserManagementService extends Service {
 
     private registerPages(ctx: Context) {
         // 注入到管理菜单
-        ctx.ui.inject('ControlPanel', 'user-management', {
-            text: '用户管理',
-            href: '/manage/users',
+        ctx.ui.inject('ControlPanel', 'user_management', {
             icon: 'account--multiple',
             order: 100
         }, PRIV.PRIV_EDIT_SYSTEM);
