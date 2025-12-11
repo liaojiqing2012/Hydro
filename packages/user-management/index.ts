@@ -1,5 +1,5 @@
 import {
-    Context, Handler, param, Types, UserModel, DomainModel,
+    Context, Handler, param, Schema, Types, UserModel, DomainModel,
     ValidationError, UserNotFoundError, PermissionError,
     PRIV, SystemModel
 } from 'hydrooj';
