@@ -61,7 +61,7 @@
               {{ form.form_text({
                 label: _('Registration Time'),
                 name: 'regat',
-                value: datetimeSpan(udoc.regat, false, 'YYYY-MM-DD HH:mm:ss')|safe if udoc.regat else '',
+                value: (new Date(udoc.regat)).toISOString().slice(0, 19).replace('T', ' ') if udoc.regat else '',
                 readonly: true
               }) }}
             </div>
