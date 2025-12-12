@@ -61,7 +61,7 @@
               {{ form.form_text({
                 label: _('Registration Time'),
                 name: 'regat',
-                value: moment(udoc.regat).format('YYYY-MM-DD HH:mm:ss') if udoc.regat else '',
+                value: datetimeSpan(udoc.regat, false, 'YYYY-MM-DD HH:mm:ss')|safe if udoc.regat else '',
                 readonly: true
               }) }}
             </div>
@@ -95,7 +95,7 @@
           <dt>{{ _('Registration Time') }}</dt>
           <dd>
             {% if udoc.regat %}
-              {{ moment(udoc.regat).format('YYYY-MM-DD HH:mm') }}
+              {{ datetimeSpan(udoc.regat, false, 'YYYY-MM-DD HH:mm')|safe }}
             {% else %}
               -
             {% endif %}
@@ -104,7 +104,7 @@
           <dt>{{ _('Last Login') }}</dt>
           <dd>
             {% if udoc.loginat %}
-              {{ moment(udoc.loginat).format('YYYY-MM-DD HH:mm') }}
+              {{ datetimeSpan(udoc.loginat, false, 'YYYY-MM-DD HH:mm')|safe }}
             {% else %}
               -
             {% endif %}

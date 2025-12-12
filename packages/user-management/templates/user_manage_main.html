@@ -75,14 +75,14 @@
           </td>
           <td class="col--regat">
             {% if udoc.regat %}
-              {{ moment(udoc.regat).format('YYYY-MM-DD HH:mm') }}
+              {{ datetimeSpan(udoc.regat, false, 'YYYY-MM-DD HH:mm')|safe }}
             {% else %}
               -
             {% endif %}
           </td>
           <td class="col--loginat">
             {% if udoc.loginat %}
-              {{ moment(udoc.loginat).format('YYYY-MM-DD HH:mm') }}
+              {{ datetimeSpan(udoc.loginat, false, 'YYYY-MM-DD HH:mm')|safe }}
             {% else %}
               -
             {% endif %}
