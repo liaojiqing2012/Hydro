@@ -58,10 +58,15 @@
               }) }}
             </div>
             <div class="medium-6 columns">
+              {% if udoc.regat %}
+                {% set regatValue = (new Date(udoc.regat)).toISOString().slice(0, 19).replace('T', ' ') %}
+              {% else %}
+                {% set regatValue = '' %}
+              {% endif %}
               {{ form.form_text({
                 label: _('Registration Time'),
                 name: 'regat',
-                value: (new Date(udoc.regat)).toISOString().slice(0, 19).replace('T', ' ') if udoc.regat else '',
+                value: regatValue,
                 readonly: true
               }) }}
             </div>
