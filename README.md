@@ -111,7 +111,21 @@ Hydro 用户群：1085853538
 <details>
 <summary><h2>更新日志（点击展开）</h2></summary>
 
-## Hydro 5.0.0-beta.14 / UI 4.58.0-beta.15
+## Hydro 5.0.0-beta.16 / UI 4.58.0-beta.17
+
+- core: 修复繁体中文 i18n 自动检测
+- scoreboard-xcpcio: 修复子域中自动重定向
+- core: 比赛导航优化
+- core&ui: 繁体中文翻译完善
+- core&ui: 支持搜索训练计划
+- core: 修复 judge 特定情况下的竞态
+- onsite-toolkit: 添加比赛模式
+- ui: 支持自动填写测试数据输入到在线 IDE
+- ui: 默认禁用提交列表页面统计数据
+- judge: 支持同时运行多组自测数据
+- ui: 细节优化
+
+## Hydro 5.0.0-beta.15 / UI 4.58.0-beta.16
 
 - core: 修复题目创建页面多语言切换
 - ui: 修复比赛题目列表显示
@@ -1002,7 +1016,7 @@ Hydro 用户群：1085853538
 
 排名不分先后，按照链接字典序  
 
-- [Github](https://github.com/) 为 Hydro 提供了代码托管与自动构建。  
+- [GitHub](https://github.com/) 为 Hydro 提供了代码托管与自动构建。  
 - [criyle](https://github.com/criyle) 提供评测沙箱实现。  
 - [Vijos](https://github.com/vijos/vj4) 为 Hydro 提供了 UI 框架。  
 
