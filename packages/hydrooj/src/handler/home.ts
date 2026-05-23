@@ -188,7 +188,7 @@ class HomeSecurityHandler extends Handler {
             session._id = md5(session._id);
             const ua = session.updateUa || session.createUa;
             if (ua) session.updateUaInfo = UAParser(ua);
-            session.updateGeoip = this.ctx.geoip?.lookup?.(
+            session.updateGeoip = this.ctx.get('geoip')?.lookup?.(
                 session.updateIp || session.createIp,
                 this.translate('geoip_locale'),
             );
@@ -202,7 +202,7 @@ class HomeSecurityHandler extends Handler {
                 'credentialID', 'name', 'credentialType', 'credentialDeviceType',
                 'authenticatorAttachment', 'regat', 'fmt',
             ])),
-            geoipProvider: this.ctx.geoip?.provider,
+            geoipProvider: this.ctx.get('geoip')?.provider,
             relations,
         };
     }
@@ -517,15 +517,18 @@ class HomeDomainHandler extends Handler {
         this.response.body = { ddocs, canManage, role };
     }
 
-    @param('id', Types.String)
+    @param('id', Types.DomainId)
     @param('star', Types.Boolean)
     async postStar({ }, id: string, star = false) {
-        if (star) await user.setById(this.user._id, { pinnedDomains: [...this.user.pinnedDomains, id] });
-        else user.setById(this.user._id, { pinnedDomains: this.user.pinnedDomains.filter((i) => i !== id) });
+        if (star) {
+            const ddoc = await domain.get(id);
+            if (!ddoc) throw new NotFoundError(id);
+            await user.setById(this.user._id, { pinnedDomains: [...this.user.pinnedDomains, id] });
+        } else user.setById(this.user._id, { pinnedDomains: this.user.pinnedDomains.filter((i) => i !== id) });
         this.back({ star });
     }
 
-    @param('id', Types.String)
+    @param('id', Types.DomainId)
     async postLeave({ }, id: string) {
         if (id === 'system') throw new BadRequestError();
         const ddoc = await domain.get(id);
@@ -612,7 +615,7 @@ class HomeMessagesHandler extends Handler {
     }
 }
 
-export const inject = { geoip: { required: false }, oauth: {} };
+export const inject = ['oauth'];
 export function apply(ctx: Context) {
     ctx.Route('homepage', '/', HomeHandler);
     ctx.Route('home_security', '/home/security', HomeSecurityHandler, PRIV.PRIV_USER_PROFILE);
